@@ -36,7 +36,13 @@ export class User extends BaseEntity {
 		default: true,
 		name: 'is_active',
 	})
-	isActive!: boolean;
+  isActive!: boolean;
+
+  @Column({
+    type: 'int',
+    nullable: false
+  })
+  experience: number
 
 	@BeforeUpdate()
 	@BeforeInsert()

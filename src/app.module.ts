@@ -12,6 +12,8 @@ import { RequestLoggerInterceptor } from './shared/interceptors/requestLogger.in
 import { LoggerModule } from './shared/logger/logger.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { UsersModule } from './users/users.module';
+import { LevelsService } from './levels/levels.service';
+import { LevelsModule } from './levels/levels.module';
 
 @Module({
 	imports: [
@@ -26,9 +28,11 @@ import { UsersModule } from './users/users.module';
 		StorageModule,
 		AuthModule,
 		MisionesModule,
+		LevelsModule,
 	],
 	providers: [
 		{ provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
+		LevelsService,
 		// { provide: APP_PIPE, useClass: ZodValidationPipe },
 	],
 })
