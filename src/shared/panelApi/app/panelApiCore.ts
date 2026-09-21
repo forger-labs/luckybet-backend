@@ -1,6 +1,13 @@
 import * as crypto from 'node:crypto';
 
-import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+	BadRequestException,
+	Inject,
+	Injectable,
+	Logger,
+	NotFoundException,
+	UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { PlayerRepoService } from '@/src/players/adapters/driven/PlayerRepo.service';
@@ -10,11 +17,19 @@ import { CACHE_PORT } from '../../cache/constants';
 import type { ForCache } from '../../cache/ports/forCache.port';
 import {
 	DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS,
+	FOR_ADMIN_PANEL,
 	FOR_USER_PANEL,
 	LUCKYBET_PLAYER_SESSION_KEY_PREFIX,
 } from '../constants';
+import type { ForAdminPanel } from '../ports/forAdminPanel.port';
 import type { ForPanelApiCore } from '../ports/forPanelApiCore.port';
 import type { ForUserPanel } from '../ports/forUserPanel.port';
+import type {
+	GetPlayedGamesOptions,
+	LuckyBetBalanceMutationOptions,
+	LuckyBetBalanceMutationResult,
+	PlayerGameHistoryResult,
+} from '../types/adminPanel.types';
 import type {
 	AuthenticatePlayerOptions,
 	PlayerAuthContext,
@@ -29,6 +44,8 @@ export class PanelApiCore implements ForPanelApiCore {
 		config: ConfigService,
 		@Inject(FOR_USER_PANEL)
 		private readonly userPanel: ForUserPanel,
+		@Inject(FOR_ADMIN_PANEL)
+		private readonly adminPanel: ForAdminPanel,
 		@Inject(CACHE_PORT)
 		private readonly cache: ForCache,
 		@Inject(PlayerRepoService)
@@ -156,5 +173,116 @@ export class PanelApiCore implements ForPanelApiCore {
 		if (!token) return;
 		const tokenHash = this.hashToken(token);
 		await this.cache.del(`${LUCKYBET_PLAYER_SESSION_KEY_PREFIX}${tokenHash}`);
+	}
+
+	/**
+	 * Credits balance to a player in LuckyBet (deposit / carga de fichas),
+	 * supporting resolution by numeric userId or username.
+	 */
+	async creditPlayer(
+		userIdOrUsername: string | number,
+		amount: number,
+		options?: LuckyBetBalanceMutationOptions,
+	): Promise<LuckyBetBalanceMutationResult> {
+		if (amount <= 0) {
+			throw new BadRequestException('El monto a acreditar debe ser mayor a cero');
+		}
+
+		const targetId = await this.resolveLuckyBetUserId(userIdOrUsername);
+		return await this.adminPanel.creditPlayer(targetId, amount, options);
+	}
+
+	/**
+	 * Debits balance from a player in LuckyBet (withdrawal / descarga de fichas),
+	 * supporting resolution by numeric userId or username and total/partial withdrawals.
+	 */
+	async debitPlayer(
+		userIdOrUsername: string | number,
+		amount: number,
+		options?: LuckyBetBalanceMutationOptions,
+	): Promise<LuckyBetBalanceMutationResult> {
+		if (!options?.all && amount <= 0) {
+			throw new BadRequestException('El monto a debitar debe ser mayor a cero');
+		}
+
+		const targetId = await this.resolveLuckyBetUserId(userIdOrUsername);
+		return await this.adminPanel.debitPlayer(targetId, amount, options);
+	}
+
+	/**
+	 * Retrieves deduplicated played games for a user within a time period,
+	 * cross-referencing with the game catalog (gameList) to enrich each game with CDN images.
+	 */
+	async getLastPlayedGames(
+		userIdOrUsername: string | number,
+		options?: GetPlayedGamesOptions & { token?: string },
+	): Promise<PlayerGameHistoryResult> {
+		const targetId = await this.resolveLuckyBetUserId(userIdOrUsername);
+
+		// 1. Obtener catálogo completo de juegos (cacheado en Redis)
+		const gameList = await this.userPanel.getGameList(options?.token);
+
+		// 2. Obtener historial deduplicado desde adminPanel
+		const history = await this.adminPanel.getLastPlayedGames(targetId, options);
+
+		// 3. Cruzar cada juego con gameList para inyectar/confirmar imagen del CDN y metadata
+		if (gameList && gameList.length > 0 && history.games?.length > 0) {
+			for (const game of history.games) {
+				const matched = gameList.find(
+					item =>
+						String(item.id).toLowerCase() === game.gameId.toLowerCase() ||
+						(item.name && item.name.toLowerCase() === game.gameId.toLowerCase()),
+				);
+				if (matched) {
+					if (matched.title || matched.name) {
+						game.gameName = matched.title || matched.name || game.gameName;
+					}
+					if (matched.provider) {
+						game.provider = matched.provider;
+					}
+					if (matched.img) {
+						game.imageUrl = matched.img;
+					}
+				}
+			}
+		}
+
+		return history;
+	}
+
+	/**
+	 * Resolves a userId or username into a canonical numeric/string LuckyBet ID.
+	 */
+	private async resolveLuckyBetUserId(
+		userIdOrUsername: string | number,
+	): Promise<string | number> {
+		const input = String(userIdOrUsername).trim();
+
+		if (!input) {
+			throw new BadRequestException('Identificador de usuario no proporcionado');
+		}
+
+		// Si ya es un ID numérico puro, retornarlo directamente
+		if (/^\d+$/.test(input)) {
+			return input;
+		}
+
+		// Si es un username alfanumérico, buscar en el panel de LuckyBet
+		const searchResults = await this.adminPanel.searchPlayer(input);
+		const matched = searchResults.find(
+			u => u.login.toLowerCase() === input.toLowerCase(),
+		);
+
+		if (matched?.id) {
+			return matched.id;
+		}
+
+		if (searchResults.length > 0 && searchResults[0].id) {
+			return searchResults[0].id;
+		}
+
+		throw new NotFoundException(
+			`No se encontró el jugador [${input}] en el panel de LuckyBet`,
+		);
 	}
 }

@@ -1,5 +1,11 @@
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
 import type {
+	GetPlayedGamesOptions,
+	LuckyBetBalanceMutationOptions,
+	LuckyBetBalanceMutationResult,
+	PlayerGameHistoryResult,
+} from '../types/adminPanel.types';
+import type {
 	AuthenticatePlayerOptions,
 	PlayerAuthContext,
 } from '../types/panelApiCore.types';
@@ -22,6 +28,35 @@ export interface ForPanelApiCore {
 		username: string,
 		phone?: string,
 	): Promise<PlayerWithoutAudit & { isNew?: boolean; wasReactivated?: boolean }>;
+
+	/**
+	 * Credits balance to a player in LuckyBet (deposit / carga de fichas),
+	 * supporting resolution by numeric userId or username.
+	 */
+	creditPlayer(
+		userIdOrUsername: string | number,
+		amount: number,
+		options?: LuckyBetBalanceMutationOptions,
+	): Promise<LuckyBetBalanceMutationResult>;
+
+	/**
+	 * Debits balance from a player in LuckyBet (withdrawal / descarga de fichas),
+	 * supporting resolution by numeric userId or username and total/partial withdrawals.
+	 */
+	debitPlayer(
+		userIdOrUsername: string | number,
+		amount: number,
+		options?: LuckyBetBalanceMutationOptions,
+	): Promise<LuckyBetBalanceMutationResult>;
+
+	/**
+	 * Retrieves deduplicated played games for a user within a time period,
+	 * cross-referencing with the game catalog (gameList) to enrich each game with CDN images.
+	 */
+	getLastPlayedGames(
+		userIdOrUsername: string | number,
+		options?: GetPlayedGamesOptions & { token?: string },
+	): Promise<PlayerGameHistoryResult>;
 
 	/**
 	 * Invalidates a player's cached session in Redis.

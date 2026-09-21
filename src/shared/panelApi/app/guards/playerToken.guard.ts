@@ -13,7 +13,6 @@ import type { PlayerAuthContext } from '../../types/panelApiCore.types';
 
 export interface RequestWithPlayer extends FastifyRequest {
 	player?: PlayerAuthContext;
-	user?: PlayerAuthContext;
 }
 
 @Injectable()
@@ -36,7 +35,6 @@ export class PlayerTokenGuard implements CanActivate {
 		const authContext = await this.panelCore.authenticatePlayer(token);
 
 		request.player = authContext;
-		request.user = authContext;
 
 		return true;
 	}

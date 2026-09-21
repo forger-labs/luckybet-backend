@@ -1,16 +1,22 @@
-import { UnauthorizedException } from '@nestjs/common';
+import {
+	BadRequestException,
+	NotFoundException,
+	UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
 import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
 import type { ForCache } from '../../cache/ports/forCache.port';
 import { PanelApiCore } from '../app/panelApiCore';
+import type { ForAdminPanel } from '../ports/forAdminPanel.port';
 import type { ForUserPanel } from '../ports/forUserPanel.port';
 
 describe('PanelApiCore', () => {
 	let panelApiCore: PanelApiCore;
 	let configServiceMock: jest.Mocked<ConfigService>;
 	let userPanelMock: jest.Mocked<ForUserPanel>;
+	let adminPanelMock: jest.Mocked<ForAdminPanel>;
 	let cacheMock: jest.Mocked<ForCache>;
 	let playerRepoMock: jest.Mocked<ForDatabasePlayers>;
 
@@ -30,12 +36,24 @@ describe('PanelApiCore', () => {
 			getLastPlayedGame: jest.fn(),
 		};
 
+		adminPanelMock = {
+			searchPlayer: jest.fn(),
+			getPlayerBalance: jest.fn(),
+			getPlayerHistory: jest.fn(),
+			creditPlayer: jest.fn(),
+			debitPlayer: jest.fn(),
+			getLastPlayedGames: jest.fn(),
+			ensureSession: jest.fn(),
+			invalidateSession: jest.fn(),
+		};
+
 		cacheMock = {
 			get: jest.fn().mockResolvedValue(null),
 			set: jest.fn().mockResolvedValue(undefined),
 			del: jest.fn().mockResolvedValue(undefined),
 			exists: jest.fn().mockResolvedValue(false),
 			ttl: jest.fn().mockResolvedValue(120),
+			flushPattern: jest.fn().mockResolvedValue(0),
 		};
 
 		playerRepoMock = {
@@ -48,6 +66,7 @@ describe('PanelApiCore', () => {
 		panelApiCore = new PanelApiCore(
 			configServiceMock,
 			userPanelMock,
+			adminPanelMock,
 			cacheMock,
 			playerRepoMock,
 		);
@@ -230,6 +249,195 @@ describe('PanelApiCore', () => {
 		it('should do nothing if token is empty', async () => {
 			await panelApiCore.invalidatePlayerSession('');
 			expect(cacheMock.del).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('creditPlayer', () => {
+		it('should throw BadRequestException if amount is less than or equal to 0', async () => {
+			await expect(panelApiCore.creditPlayer(8_744_343, 0)).rejects.toThrow(
+				BadRequestException,
+			);
+			await expect(panelApiCore.creditPlayer(8_744_343, -100)).rejects.toThrow(
+				BadRequestException,
+			);
+		});
+
+		it('should credit balance with direct numeric userId', async () => {
+			adminPanelMock.creditPlayer.mockResolvedValueOnce({
+				success: true,
+				operationId: '12345',
+				amountSent: 2000,
+				currencies: { ARS: '2000' },
+			});
+
+			const result = await panelApiCore.creditPlayer(8_744_343, 2000, {
+				currency: 'ARS',
+			});
+
+			expect(result.success).toBe(true);
+			expect(adminPanelMock.creditPlayer).toHaveBeenCalledWith('8744343', 2000, {
+				currency: 'ARS',
+			});
+		});
+
+		it('should resolve username to userId via searchPlayer before crediting', async () => {
+			adminPanelMock.searchPlayer.mockResolvedValueOnce([
+				{ id: '8744343', login: 'serrot99' },
+			]);
+			adminPanelMock.creditPlayer.mockResolvedValueOnce({
+				success: true,
+				operationId: '67890',
+				amountSent: 5000,
+			});
+
+			const result = await panelApiCore.creditPlayer('serrot99', 5000);
+
+			expect(adminPanelMock.searchPlayer).toHaveBeenCalledWith('serrot99');
+			expect(adminPanelMock.creditPlayer).toHaveBeenCalledWith(
+				'8744343',
+				5000,
+				undefined,
+			);
+			expect(result.success).toBe(true);
+		});
+
+		it('should throw NotFoundException if username cannot be resolved in LuckyBet', async () => {
+			adminPanelMock.searchPlayer.mockResolvedValueOnce([]);
+
+			await expect(panelApiCore.creditPlayer('unknown_user', 1000)).rejects.toThrow(
+				NotFoundException,
+			);
+			expect(adminPanelMock.creditPlayer).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('debitPlayer', () => {
+		it('should throw BadRequestException if amount <= 0 and all is not true', async () => {
+			await expect(panelApiCore.debitPlayer(8_744_343, 0)).rejects.toThrow(
+				BadRequestException,
+			);
+		});
+
+		it('should allow amount 0 when all is true (total withdrawal)', async () => {
+			adminPanelMock.debitPlayer.mockResolvedValueOnce({
+				success: true,
+				operationId: '99999',
+				amountSent: 0,
+			});
+
+			const result = await panelApiCore.debitPlayer(8_744_343, 0, { all: true });
+
+			expect(result.success).toBe(true);
+			expect(adminPanelMock.debitPlayer).toHaveBeenCalledWith('8744343', 0, {
+				all: true,
+			});
+		});
+
+		it('should debit balance with username resolution', async () => {
+			adminPanelMock.searchPlayer.mockResolvedValueOnce([
+				{ id: '8744343', login: 'serrot99' },
+			]);
+			adminPanelMock.debitPlayer.mockResolvedValueOnce({
+				success: true,
+				operationId: '88888',
+				amountSent: 1500,
+			});
+
+			const result = await panelApiCore.debitPlayer('serrot99', 1500);
+
+			expect(adminPanelMock.searchPlayer).toHaveBeenCalledWith('serrot99');
+			expect(adminPanelMock.debitPlayer).toHaveBeenCalledWith('8744343', 1500, undefined);
+			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('getLastPlayedGames', () => {
+		it('should retrieve played games and enrich them with gameList catalog images and metadata', async () => {
+			userPanelMock.getGameList.mockResolvedValueOnce([
+				{
+					id: 'sweet_bonanza',
+					name: 'sweet_bonanza',
+					title: 'Sweet Bonanza 1000',
+					provider: 'Pragmatic Play',
+					img: 'https://cdn.cdnpin.com/resources/games/sweet_bonanza.png',
+				},
+				{
+					id: 'gates_of_olympus',
+					name: 'gates_of_olympus',
+					title: 'Gates of Olympus',
+					provider: 'Pragmatic Play',
+					img: 'https://cdn.cdnpin.com/resources/games/gates.png',
+				},
+			]);
+
+			adminPanelMock.getLastPlayedGames.mockResolvedValueOnce({
+				userId: '8744343',
+				periodDays: 7,
+				from: '2026-09-14 00:00:00',
+				to: '2026-09-21 00:00:00',
+				totalUniqueGames: 2,
+				games: [
+					{
+						gameId: 'sweet_bonanza',
+						gameName: 'Sweet Bonanza',
+						lastPlayedAt: '2026-09-21 12:00:00',
+						playCount: 4,
+						totalWagerInPeriod: 1200,
+					},
+					{
+						gameId: 'gates_of_olympus',
+						gameName: 'Gates of Olympus',
+						lastPlayedAt: '2026-09-20 18:00:00',
+						playCount: 1,
+						totalWagerInPeriod: 500,
+					},
+				],
+			});
+
+			const result = await panelApiCore.getLastPlayedGames('8744343', {
+				days: 7,
+				limit: 10,
+			});
+
+			expect(result.userId).toBe('8744343');
+			expect(result.games).toHaveLength(2);
+
+			const sweet = result.games[0];
+			expect(sweet.gameId).toBe('sweet_bonanza');
+			expect(sweet.gameName).toBe('Sweet Bonanza 1000');
+			expect(sweet.provider).toBe('Pragmatic Play');
+			expect(sweet.imageUrl).toBe(
+				'https://cdn.cdnpin.com/resources/games/sweet_bonanza.png',
+			);
+
+			const gates = result.games[1];
+			expect(gates.gameId).toBe('gates_of_olympus');
+			expect(gates.provider).toBe('Pragmatic Play');
+			expect(gates.imageUrl).toBe('https://cdn.cdnpin.com/resources/games/gates.png');
+		});
+
+		it('should resolve username before querying last played games', async () => {
+			adminPanelMock.searchPlayer.mockResolvedValueOnce([
+				{ id: '8744343', login: 'serrot99' },
+			]);
+			userPanelMock.getGameList.mockResolvedValueOnce([]);
+			adminPanelMock.getLastPlayedGames.mockResolvedValueOnce({
+				userId: '8744343',
+				periodDays: 7,
+				from: '2026-09-14 00:00:00',
+				to: '2026-09-21 00:00:00',
+				totalUniqueGames: 0,
+				games: [],
+			});
+
+			const result = await panelApiCore.getLastPlayedGames('serrot99');
+
+			expect(adminPanelMock.searchPlayer).toHaveBeenCalledWith('serrot99');
+			expect(adminPanelMock.getLastPlayedGames).toHaveBeenCalledWith(
+				'8744343',
+				undefined,
+			);
+			expect(result.userId).toBe('8744343');
 		});
 	});
 });
