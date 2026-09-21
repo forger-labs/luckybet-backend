@@ -1,8 +1,8 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 
-import { BaseEntity } from '@/src/shared/entities/base.entity';
-import { BonusIntern } from '@/src/types/bonus';
-import { Player } from '@/src/players/app/entities/player.entity';
+import { Player } from '../../../players/app/entities/player.entity';
+import { BaseEntity } from '../../../shared/entities/base.entity';
+import { BonusIntern } from '../../../types/bonus';
 
 @Entity('levels')
 export default class LevelsEntity extends BaseEntity {
@@ -25,7 +25,7 @@ export default class LevelsEntity extends BaseEntity {
     name: 'min_experience',
     nullable: false,
   })
-  minExperience: number
+  minExperience: number;
 
   @Column({
     type: 'int',
@@ -38,8 +38,8 @@ export default class LevelsEntity extends BaseEntity {
     nullable: true,
     enum: BonusIntern,
   })
-  bonus: BonusIntern
+  bonus: BonusIntern;
 
-  @OneToMany(() => Player, (player) => player.level) players: Player[]
-
+  @OneToMany(() => Player, (player) => player.level)
+  players: Player[];
 }

@@ -1,3 +1,1 @@
-export interface ForManageLevels {
-
-}
+export interface ForManageLevels {}

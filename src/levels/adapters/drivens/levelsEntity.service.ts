@@ -7,12 +7,10 @@ import { ForDatabaseLevels } from '../../ports/drivers/forDatabaseLevels';
 
 @Injectable()
 export class LevelsEntityService implements ForDatabaseLevels {
-  // constructor(
-  //   @InjectRepository(LevelsEntity)
-  //   private readonly levelsRepo: Repository<LevelsEntity>,
-  // ) { }
-
-  // createLevel() {
-
-  // }
+	// constructor(
+	//   @InjectRepository(LevelsEntity)
+	//   private readonly levelsRepo: Repository<LevelsEntity>,
+	// ) { }
+	// createLevel() {
+	// }
 }

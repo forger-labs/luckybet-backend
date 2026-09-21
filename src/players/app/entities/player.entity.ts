@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
-import LevelsEntity from '@/src/levels/app/entities/levels.entity';
+import LevelsEntity from '../../../levels/app/entities/levels.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { User } from '../../../users/app/entities/user.entity';
 
@@ -60,4 +60,10 @@ export class Player extends BaseEntity {
   @ManyToOne(() => LevelsEntity, (level) => level.players, { nullable: false })
   @JoinColumn({ name: 'level_id' })
   level?: LevelsEntity;
+
+  @Column({
+    type: 'int',
+    default: 0,
+  })
+  experience!: number;
 }
