@@ -6,7 +6,7 @@ import { LevelsController } from './adapters/drivers/levels.controller';
 import LevelsEntity from './app/entities/levels.entity';
 
 @Module({
-  imports: [PlayersModule, TypeOrmModule.forFeature([LevelsEntity]), ],
-  controllers: [LevelsController],
+	imports: [PlayersModule, TypeOrmModule.forFeature([LevelsEntity])],
+	controllers: [LevelsController],
 })
 export class LevelsModule {}

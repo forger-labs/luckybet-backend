@@ -1,166 +1,288 @@
-# Guía de llamadas API LuckyBet — métodos, formato y funcionamiento
+# Guía de llamadas API LuckyBet — Métodos, Formato y Funcionamiento
 
-> Consolidado de la investigación (2026-09-13/14). Complementa a `luckybet-login-report.md` (API de jugadores) y `luckybet-admin-report.md` (panel admin).
-> **Pregunta clave que responde esta guía: ¿con qué método se llama cada endpoint y qué formato de body se usa?**
-
----
-
-## 1. Resumen: hay DOS APIs distintas
-
-LuckyBet expone **dos interfaces** con **formatos de request completamente distintos**:
-
-| # | API | Host | Formato del request | Formato de la respuesta |
-|---|---|---|---|---|
-| **A** | Jugadores (login, perfil, juegos) | `api.luckybet.site` (`?act=command&area=cmd`) | **JSON** (`Content-Type: application/json`) | **JSON** (envelope propio) |
-| **B** | Panel admin / agente (usuarios, balance, operaciones) | `admin.luckybet.site` y `ag.luckybet.site` (`index.php?act=admin&area=<AREA>`) | **Form-urlencoded** (`application/x-www-form-urlencoded`) | **JSON** (con `response=js`) o **HTML** |
-
-> **Tu suposición es correcta para el panel admin:** las llamadas del panel **NO usan JSON**. El body viaja como *form data* (`clave=valor&clave2=valor2`). Solo la API de jugadores (`?act=command&area=cmd`) usa body JSON.
+> Consolidado y actualizado (2026-09-21) con las especificaciones de arquitectura hexagonal, integración con Redis, seguridad criptográfica (SHA-256) y soporte nativo de historial (`area=history`) e imágenes CDN (`cdn.cdnpin.com`).
+> Complementa a `luckybet-login-report.md` (API de jugadores) y `luckybet-admin-report.md` (panel admin/agente).
 
 ---
 
-## 2. Autenticación (importante para ambas)
+## 1. Resumen de Arquitectura: Dos APIs Distintas
 
-| API | Mecanismo |
-|---|---|
-| **A. Jugadores** | Token opaco de 32 hex en el **body JSON** (`"token": "..."`). Se obtiene con login (`cmd: authorization`). No funciona por query ni header. |
-| **B. Panel admin** | **Sesión PHP** (`Cookie: PHPSESSID=<id>`). Se obtiene con `POST ?act=admin&area=login`. `admin.luckybet.site` y `ag.luckybet.site` **no comparten sesión** (login por separado). La sesión caduca tras ~minutos de inactividad (el panel redirige a login; el front la mantiene viva recargando cada 60 s). |
+LuckyBet opera con **dos interfaces completamente independientes** con modelos de datos, protocolos y métodos de autenticación diferenciados:
 
----
-
-## 3. API A — Jugadores (`api.luckybet.site`) — body **JSON**
-
-Endpoint único: **`POST`** `https://api.luckybet.site/?act=command&area=cmd`
-
-| Content-Type request | `application/json` |
-|---|---|
-| Content-Type response | `application/json` |
-| Parámetros requeridos | `version: 9`, `domain: "luckybet.site"` (sin ellos no responde) |
-
-Todas las llamadas son **POST** con un `cmd`; los comandos autenticados llevan el `token` en el body:
-
-```sh
-# Login (jugador)
-POST https://api.luckybet.site/?act=command&area=cmd
-Content-Type: application/json
-{"cmd":"authorization","type":"login","data":{"login":"serrot99","password":"991702"},"version":9,"domain":"luckybet.site"}
-# → {"token":"<32hex>","status":"success","content":{"language":"es"}}
-
-# Verificar token / perfil
-POST <mismo endpoint>
-{"cmd":"terminalInfo","first":true,"token":"<token>","version":9,"domain":"luckybet.site"}
-# → valid: {"status":"success","content":{"id":..., "login":"...", "cash":"...", "currency":"ARS", ...}}
-# → inválido: {"errorCode":"authorize_error","error":"Autorización fallida","status":"fail"}
-```
-
-Comandos: `authorization`, `terminalInfo`, `gameList`, `userLogout`, `casinoNRegister`, `currencySet`, `casinoPasswordChange`, `passwordRecovery`, `config/getConfig`, `langs/getLanguages`.
+| Característica | API A: Jugadores | API B: Panel Admin / Agente |
+| :--- | :--- | :--- |
+| **Host Principal** | `https://api.luckybet.site` | `https://ag.luckybet.site` (agente global) / `https://admin.luckybet.site` |
+| **Endpoint Base** | `/?act=command&area=cmd` | `/index.php?act=admin&area=<AREA>` |
+| **Protocolo / Body** | **JSON** (`Content-Type: application/json`) | **Form-urlencoded** (`application/x-www-form-urlencoded`) |
+| **Formato Respuesta** | **JSON** (envelope `{ status: "success" \| "fail", ... }`) | **JSON** (con `response=js`) o **HTML** |
+| **Mecanismo Auth** | Token opaco de 32 hex en el **body JSON** | **Sesión PHP (`PHPSESSID`)** vía Header `Cookie: PHPSESSID=<id>` |
+| **Propósito Principal** | Autenticación de jugadores, terminal info, catálogo de juegos (`gameList`). | Búsqueda global, consulta y mutación de balance (depósitos/retiros), auditoría de sesiones (`area=history`). |
 
 ---
 
-## 4. API B — Panel admin (`admin.luckybet.site` / `ag.luckybet.site`) — body **form-urlencoded**
+## 2. Seguridad y Gestión de Sesiones en el Backend
 
-### 4.1 Login y logout
+### 2.1 Autenticación de Jugadores (`PlayerTokenGuard` y `PanelApiCore`)
+- **Validación del Token**: El frontend envía el token en `Authorization: Bearer <token>` o header `x-player-token`.
+- **Caché Criptográfico en Redis (SHA-256)**:
+  - **Seguridad**: El token en texto plano **nunca se almacena en Redis**.
+  - **Clave**: `luckybet:session:token:<sha256_hash>` con un TTL corto de **120 segundos (2 min)**.
+  - **Valor**: Contexto del jugador (`PlayerAuthContext`: `id`, `username`, `phone`, `levelId`, `cash`, `currency`).
+- **Auto-Registro**: Si `terminalInfo` valida el token pero el jugador no existe en la base de datos local `players`, se crea automáticamente con nivel base y estado activo.
+- **Auto-Reactivación (Self-Healing)**: Si un usuario previamente desactivado o eliminado fue restaurado en el panel de LuckyBet y genera un nuevo token válido, el backend lo reactiva automáticamente (`isActive = true`) de forma transparente.
 
-```sh
-# Login — SOLO POST, form-urlencoded, NO devuelve JSON (302 + Set-Cookie PHPSESSID)
-POST https://ag.luckybet.site/index.php?act=admin&area=login
-Content-Type: application/x-www-form-urlencoded
-login=Tigreee4&password=<pass>
-# → 302 Location: index.php + Set-Cookie: PHPSESSID=<id>  (guardar la SEGUNDA cookie)
+### 2.2 Sesión Admin PHP (`AdminPanelService`)
+- **Persistencia en Redis**: Cookie `PHPSESSID` almacenada bajo `luckybet:admin:phpsessid` con TTL de **240 segundos (4 min)**.
+- **Auto-Login & Reintento**: Detección automática de sesión expirada (respuestas con `noMain: true`, `redirect: "login"` o código HTTP `302`). Invalida la clave en Redis, re-autentica mediante `POST area=login` (extrayendo la segunda cookie de sesión) y reintenta la petición original en vuelo.
 
-# Logout — GET simple
-GET  https://ag.luckybet.site/index.php?act=admin&area=logout
-```
+---
 
-> Todas las llamadas siguientes envían `Cookie: PHPSESSID=<id>`.
+## 3. API A — Jugadores (`api.luckybet.site`) — Body JSON
 
-### 4.2 Tabla resumen de llamadas del panel
+**Endpoint único:** `POST https://api.luckybet.site/?act=command&area=cmd`
 
-| Llamada | Método | Content-Type request | Body / Query | Respuesta |
-|---|---|---|---|---|
-| Dashboard (lista red) | **GET** | — | — | HTML (datos embebidos `usersClass`) |
-| **Búsqueda global de jugador** | **POST** (obligatorio) | `application/x-www-form-urlencoded` | `search_login=<login>&page=1` | **JSON** `application/json` |
-| Estadísticas/getusers | **GET o POST** | form (si POST) | `id`, `from`, `to`, `currency`, `currencyName`, `promo`... | **JSON** |
-| Balance: consulta | **GET** | — | `id`, `response=js`, `from`, `to`, `limit`, `offset`... | **JSON** (saldo + `operationsData`) |
-| Balance: **carga/retiro** | **POST** | `application/x-www-form-urlencoded` | `balance_currency`, `amount`, `send=true`, `all=false`, `operation=in\|out` | **JSON** (`successMessage`/`error`) |
-| Perfil usuario | **GET** | — | `id`, `search`, `promocode` | HTML (con `dataList` JSON embebido) |
-| Excel | **GET** | — | `id`, `response=xlsx` | `.xlsx` |
-| Historial bonus session | **GET** | — | `id`, `session` | HTML |
-| Jackpots | **GET** | — | `id` | HTML |
-| Print report | **GET** | — | `id` | HTML |
-
-### 4.3 Detalle: búsqueda global (la que permitió hallar a serrot99)
-
-```sh
-# POST — solo funciona con POST (con GET responde 200 pero users=[])
-POST https://ag.luckybet.site/index.php?act=admin&area=search&response=js
-Content-Type: application/x-www-form-urlencoded
-search_login=serrot99&page=1
-```
-
-Respuesta JSON:
+Todos los requests requieren en el body JSON:
 ```json
 {
-  "editUser": {"login":"Tigreee4","id":8646336},
-  "main": {"login":"Tigreee4","group":6,"balance":700000,"currency":"ARS","reloadTime":60000},
-  "search": "serrot99",
-  "users": [
-    {"id":"8744343","login":"serrot99","group":"5","name":"","weight":"2","create":"8745704","additional":[]},
-    {"id":"9221700","login":"serrot99381053","group":"5","name":"","weight":"1","create":"5358728","additional":[]},
-    {"id":"9188289","login":"serrot99232224","group":"5","name":"","weight":"1","create":"5358728","additional":[]}
-  ],
-  "next_page_enable": false, "prev_page_enable": false,
-  "page_start_num": 1, "page_end_num": 3,
-  "page": "base", "downloadReport": true
+  "version": 9,
+  "domain": "luckybet.site"
 }
 ```
-- Paginación: `page=N`; respuesta trae `next_page_enable`/`prev_page_enable` y `page_start_num`/`page_end_num`.
-- Es la vía para operar jugadores **fuera** de la red del operador (en `admin.luckybet.site` un id ajeno da `error: "Usuario incorrecto"`).
 
-### 4.4 Detalle: consulta de balance (lectura)
+### 3.1 Login de Jugador
+```http
+POST /?act=command&area=cmd HTTP/1.1
+Host: api.luckybet.site
+Content-Type: application/json
 
-```sh
-GET https://ag.luckybet.site/index.php?act=admin&area=balance&id=8744343&response=js&limit=5
-     &from=2026-09-14%2000:00:00&to=2026-09-14%2023:59:59
-# (from/to con espacio → URL-encode: %20)
+{
+  "cmd": "authorization",
+  "type": "login",
+  "data": {
+    "login": "serrot99",
+    "password": "password123"
+  },
+  "version": 9,
+  "domain": "luckybet.site"
+}
 ```
-Respuesta JSON: `currencies` (saldo actual por moneda), `operationsData[]` (movimientos: `id, user, from, uid, operation, currency, cash, cash_before, datetime, system, initiator, wager, ip, cash_in, cash_out, cashier_bonus, date, time`), `sum` (totales del período), `limits`, `balanceTypes`, `dataList`, `pageCount`, `limit`, `offset`.
+**Respuesta:**
+```json
+{
+  "token": "a1b2c3d4e5f6789012345678abcdef01",
+  "status": "success",
+  "content": {
+    "language": "es"
+  }
+}
+```
 
-### 4.5 Detalle: operación de balance (carga/retiro) — ESCRITURA
+### 3.2 Terminal Info / Verificación de Token
+```http
+POST /?act=command&area=cmd HTTP/1.1
+Host: api.luckybet.site
+Content-Type: application/json
 
-```sh
-POST https://ag.luckybet.site/index.php?act=admin&area=balance&response=js&type=frame&printing=true&id=8744343
+{
+  "cmd": "terminalInfo",
+  "token": "a1b2c3d4e5f6789012345678abcdef01",
+  "first": true,
+  "version": 9,
+  "domain": "luckybet.site"
+}
+```
+**Respuesta Válida:**
+```json
+{
+  "status": "success",
+  "content": {
+    "id": 8744343,
+    "login": "serrot99",
+    "cash": "5000.00",
+    "currency": "ARS",
+    "game": null,
+    "bonus_game": null,
+    "last": "2026-09-21 14:00:00"
+  }
+}
+```
+**Respuesta Inválida (Expirado o Eliminado):**
+```json
+{
+  "status": "fail",
+  "errorCode": "authorize_error",
+  "error": "Autorización fallida"
+}
+```
+
+### 3.3 Catálogo de Juegos e Imágenes CDN (`gameList`)
+Obtiene la lista completa de slots y juegos disponibles. Se cachea en Redis bajo `luckybet:catalog:game_list` con TTL de **1 hora (3600 s)**.
+
+```http
+POST /?act=command&area=cmd HTTP/1.1
+Host: api.luckybet.site
+Content-Type: application/json
+
+{
+  "cmd": "gameList",
+  "token": "a1b2c3d4e5f6789012345678abcdef01",
+  "version": 9,
+  "domain": "luckybet.site"
+}
+```
+**Estructura de Items del Catálogo:**
+```json
+{
+  "status": "success",
+  "content": [
+    {
+      "id": "sweet_bonanza",
+      "name": "sweet_bonanza",
+      "title": "Sweet Bonanza 1000",
+      "provider": "Pragmatic Play",
+      "img": "https://cdn.cdnpin.com/resources/games/sweet_bonanza/icon.png",
+      "type": "slots"
+    }
+  ]
+}
+```
+> **CDN de Imágenes:** Las imágenes públicas residen en `https://cdn.cdnpin.com/resources/...`.
+
+---
+
+## 4. API B — Panel Admin / Agente (`ag.luckybet.site`) — Form-Urlencoded
+
+> **Importante:** Todas las consultas al panel deben enviar `Cookie: PHPSESSID=<id>`.
+
+### 4.1 Login de Operador / Agente
+```http
+POST /index.php?act=admin&area=login HTTP/1.1
+Host: ag.luckybet.site
 Content-Type: application/x-www-form-urlencoded
 
-balance_currency=ARS&amount=2000&send=true&all=false&operation=in
-#   operation=in  → carga (depósito)
-#   operation=out → retiro
-#   all=false     → retiro parcial por monto; all=true → retiro total
+login=Tigreee4&password=secretPassword
 ```
-Respuesta JSON: `successMessage: "Balance es cambiado con éxito"`, `printUrl` (contiene `operation=<id>` de la operación hecha), `currencies` (saldo resultante). Errores → `error`/`errorMessage`.
+- **Respuesta:** `302 Found` con `Set-Cookie: PHPSESSID=<id>; path=/`. (Debe capturarse la segunda cookie emitida).
 
-> ⚠️ **Factor ×2 observado (2026-09-14):** `amount=2000` con `operation=in` subió el saldo real de 0 a **4000**; `operation=out` con `amount=2000` lo bajó de 4000 a **0**. Efecto real = 2× el `amount`, pero **simétrico** (carga+retiro del mismo monto ⇒ saldo neto inicial). Calcular montos reales con este factor al automatizar cargas de misiones.
+### 4.2 Búsqueda Global de Jugadores (`area=search`)
+Permite localizar jugadores en toda la red (incluso fuera del grupo directo del operador). **Requiere método POST.**
+
+```http
+POST /index.php?act=admin&area=search&response=js HTTP/1.1
+Host: ag.luckybet.site
+Content-Type: application/x-www-form-urlencoded
+Cookie: PHPSESSID=session_xyz
+
+search_login=serrot99&page=1
+```
+**Respuesta:**
+```json
+{
+  "users": [
+    {
+      "id": "8744343",
+      "login": "serrot99",
+      "group": "5",
+      "name": "",
+      "weight": "2"
+    }
+  ],
+  "next_page_enable": false,
+  "page_start_num": 1,
+  "page_end_num": 1
+}
+```
+
+### 4.3 Historial de Sesiones y Rondas de Juego (`area=history`)
+**Endpoint nativo para auditar partidas reales de slots.** Límite máximo de **1.000 registros** por consulta.
+
+```http
+GET /index.php?act=admin&area=history&id=8744343&response=js&limit=1000&from=2026-09-14%2000:00:00&to=2026-09-21%2023:59:59 HTTP/1.1
+Host: ag.luckybet.site
+Cookie: PHPSESSID=session_xyz
+```
+**Respuesta JSON:**
+```json
+{
+  "sessions": [
+    {
+      "id": "1849204",
+      "game": "sweet_bonanza",
+      "game_name": "Sweet Bonanza",
+      "datetime": "2026-09-21 12:30:15",
+      "wager": "250.00",
+      "win": "500.00",
+      "session": "sess_89431"
+    }
+  ]
+}
+```
+
+### 4.4 Libro Contable de Balances y Movimientos (`area=balance`)
+Consulta el libro contable de transacciones y balance histórico de la cuenta.
+
+```http
+GET /index.php?act=admin&area=balance&id=8744343&response=js&limit=1000&from=2026-09-14%2000:00:00&to=2026-09-21%2023:59:59 HTTP/1.1
+Host: ag.luckybet.site
+Cookie: PHPSESSID=session_xyz
+```
+**Respuesta JSON:**
+```json
+{
+  "currencies": {
+    "ARS": "5000.00"
+  },
+  "operationsData": [
+    {
+      "id": "63842104",
+      "user": "serrot99",
+      "from": "Tigreee4",
+      "operation": "in",
+      "currency": "ARS",
+      "cash": "2000.00",
+      "cash_before": "0.00",
+      "datetime": "2026-09-21 10:15:00",
+      "system": "admin"
+    }
+  ]
+}
+```
+
+### 4.5 Operaciones de Saldo (Depósitos y Retiros) — Escritura
+
+```http
+POST /index.php?act=admin&area=balance&response=js&type=frame&printing=true&id=8744343 HTTP/1.1
+Host: ag.luckybet.site
+Content-Type: application/x-www-form-urlencoded
+Cookie: PHPSESSID=session_xyz
+
+balance_currency=ARS&amount=2000&send=true&all=false&operation=in&bonus=100&promocode=PROMO100
+```
+
+#### Parámetros de Operación:
+| Parámetro | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `operation` | `string` | `in` = Carga (depósito) \| `out` = Retiro. |
+| `amount` | `number` | Monto nominal de la operación (**Paridad 1:1**). |
+| `all` | `string` | `false` = Operación parcial por el monto indicado \| `true` = Retiro total (vaciar saldo de la cuenta). |
+| `send` | `string` | `true` para confirmar la ejecución. |
+| `bonus` | `number \| string` | *(Opcional)* Código de bono (ej. `100` para 100% de bono de bienvenida). |
+| `promocode` | `string` | *(Opcional)* Código promocional asociado a la carga. |
+| `cashier_bonus` | `number \| string` | *(Opcional)* Bono asignado por caja/agente. |
+| `balance_type` | `string` | *(Opcional)* Tipo de balance contable de destino. |
+
+#### Aclaración sobre Paridad Nominal 1:1 y Bonos de Bienvenida:
+> **Nota de Negocio:** Las operaciones se acreditan en **paridad 1:1 nominal**.
+> En pruebas iniciales donde recargar `2.000` mostraba un saldo visible de `4.000`, esto no correspondía a un factor multiplicador del panel, sino a la suma del **saldo real acreditable ($2.000 cash)** más el **saldo de bonificación/wager ($2.000 bono 100%)** activo en el jugador de prueba. No se debe aplicar ninguna división o multiplicación artificial en el backend.
 
 ---
 
-## 5. Envelope de respuesta (formato común JSON)
+## 5. Resumen de Claves y TTLs en Redis
 
-Tanto la API de jugadores como el panel usan campos propios (no REST estándar):
-
-```
-{ "status": "success"|"fail", "content": {...}, "errorCode": "...", "error": "...",
-  "datetime": "YYYY-MM-DD HH:MM:SS", "microtime": 0.0, "main": {...}, "editUser": {...}, ... }
-```
-- Códigos de error observados: `authorize_error` (token/sesión inválida), `cmd_not_found` (comando inexistente), `password_not_correct`, `currency_not_set`, `Usuario incorrecto` (id fuera de la red del operador).
-- El panel distingue consulta vs error con `response=js` → JSON, y cualquier otra cosa → HTML.
-
----
-
-## 6. Notas de implementación (para `luckybet-premios-backend`)
-
-1. **Dos clientes HTTP distintos:**
-   - Jugadores: `POST` + body **JSON** a `api.luckybet.site/?act=command&area=cmd`.
-   - Panel: `POST/GET` + body **form-urlencoded** (o query params) a `admin|ag.luckybet.site/index.php?act=admin&area=...`, con **cookie jar** (`PHPSESSID`) y re-login automático al detectar redirección a login o `noMain/redirect: login`.
-2. **Nunca mezclar formatos:** body JSON contra el panel devuelve error; form-urlencoded contra la API de jugadores tampoco funciona (requiere JSON).
-3. **Sesión del panel:** corta (minutos de inactividad) → guardar cookie, re-login bajo demanda (patrón: si la respuesta es `{"noMain":true,"login":"","redirect":"login"}` o un 302, re-loguear y reintentar).
-4. **Factor ×2** en operaciones de balance (sección 4.5) hasta validar la semántica oficial del monto.
-5. **Id canónico del jugador:** el `id` de la API de jugadores (`terminalInfo`) = el `id`/`uid` del panel (serrot99 = `8744343`).
+| Clave | TTL | Propósito |
+| :--- | :--- | :--- |
+| `luckybet:session:token:<sha256_hash>` | **120 s (2 min)** | Caché de sesión de jugador autenticado (`PlayerAuthContext`). |
+| `luckybet:admin:phpsessid` | **240 s (4 min)** | Cookie de sesión PHP activa del panel de administración/agente. |
+| `luckybet:catalog:game_list` | **3600 s (1 h)** | Catálogo completo de juegos e imágenes del CDN. |
+| `luckybet:player:recent_games:<userId>:<days>:<limit>` | **300 s (5 min)** | Historial de juegos deduplicados y enriquecidos de la última semana. |
+| `luckybet:player:last_game:<playerId>` | **300 s (5 min)** | Último juego jugado o activo por token de jugador. |
