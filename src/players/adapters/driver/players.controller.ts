@@ -10,9 +10,19 @@ import {
 	Patch,
 	Post,
 	Query,
+	UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiCreatedResponse, ApiQuery } from '@nestjs/swagger';
+import {
+	ApiCookieAuth,
+	ApiCreatedResponse,
+	ApiOkResponse,
+	ApiQuery,
+} from '@nestjs/swagger';
 
+import { JwtGuard } from '@/src/auth/app/guards/jwt.guard';
+import { CurrentPlayer } from '@/src/shared/panelApi/app/decorators/currentPlayer.decorator';
+import { PlayerTokenGuard } from '@/src/shared/panelApi/app/guards/playerToken.guard';
+import type { PlayerAuthContext } from '@/src/shared/panelApi/types/panelApiCore.types';
 import {
 	buildPaginatedResponse,
 	buildResponse,
@@ -66,6 +76,7 @@ export class PlayersController {
 
 	@Get(':id')
 	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtGuard)
 	@ApiCreatedResponse({ type: PlayerResponseDto })
 	async findOne(@Param('id', new ParseIntPipe({ optional: true })) id: number) {
 		const player = await this.playersCore.findById(id);
@@ -74,6 +85,7 @@ export class PlayersController {
 
 	@Patch(':id')
 	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtGuard)
 	@ApiCreatedResponse({ type: PlayerResponseDto })
 	async update(
 		@Param('id', new ParseIntPipe({ optional: true })) id: number,
@@ -82,5 +94,12 @@ export class PlayersController {
 		const player = await this.playersCore.updatePlayerById(id, updatePlayerDto);
 
 		return buildResponse(player, 'Player editado exitosamente', true);
+	}
+
+	@Get('me')
+	@UseGuards(PlayerTokenGuard)
+	@ApiOkResponse({ type: PlayerResponseDto })
+	me(@CurrentPlayer() player: PlayerAuthContext) {
+		return buildResponse(player, 'Success', true);
 	}
 }

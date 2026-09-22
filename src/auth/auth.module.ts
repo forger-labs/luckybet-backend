@@ -9,6 +9,7 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './adapters/driver/auth.controller';
 import { AuthCore } from './app/authCore';
 import { JwtGuard } from './app/guards/jwt.guard';
+import { RolesGuard } from './app/guards/roles.guard';
 import { JwtStrategy } from './app/strategies/jwt.strategy';
 import { AUTHCORE_PROVIDER } from './constants';
 
@@ -36,7 +37,8 @@ import { AUTHCORE_PROVIDER } from './constants';
 		},
 		JwtStrategy,
 		JwtGuard,
+		RolesGuard,
 	],
-	exports: [JwtGuard],
+	exports: [JwtGuard, RolesGuard],
 })
 export class AuthModule {}

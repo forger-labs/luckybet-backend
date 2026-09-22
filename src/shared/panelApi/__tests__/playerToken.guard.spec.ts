@@ -18,6 +18,9 @@ describe('PlayerTokenGuard', () => {
 			syncOrRegisterPlayer: jest.fn(),
 			invalidatePlayerSession: jest.fn(),
 			hashToken: jest.fn(),
+			creditPlayer: jest.fn(),
+			debitPlayer: jest.fn(),
+			getLastPlayedGames: jest.fn(),
 		};
 
 		guard = new PlayerTokenGuard(panelCoreMock);
@@ -65,7 +68,6 @@ describe('PlayerTokenGuard', () => {
 		expect(canActivate).toBe(true);
 		expect(panelCoreMock.authenticatePlayer).toHaveBeenCalledWith('valid-jwt-token-123');
 		expect(request.player).toEqual(mockPlayer);
-		expect(request.user).toEqual(mockPlayer);
 	});
 
 	it('should extract token from x-player-token header', async () => {

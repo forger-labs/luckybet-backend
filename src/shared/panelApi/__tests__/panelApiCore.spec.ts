@@ -53,7 +53,6 @@ describe('PanelApiCore', () => {
 			del: jest.fn().mockResolvedValue(undefined),
 			exists: jest.fn().mockResolvedValue(false),
 			ttl: jest.fn().mockResolvedValue(120),
-			flushPattern: jest.fn().mockResolvedValue(0),
 		};
 
 		playerRepoMock = {
@@ -149,6 +148,7 @@ describe('PanelApiCore', () => {
 				username: 'newplayer123',
 				phone: '11223344',
 				isActive: true,
+				experience: 0,
 			});
 
 			const result = await panelApiCore.authenticatePlayer('new-valid-token');
@@ -195,6 +195,7 @@ describe('PanelApiCore', () => {
 				username: 'restoreduser',
 				phone: null,
 				isActive: false,
+				experience: 0,
 			};
 			playerRepoMock.findByUnique.mockResolvedValueOnce(inactivePlayer);
 			playerRepoMock.updatePlayerById.mockResolvedValueOnce({
@@ -226,6 +227,7 @@ describe('PanelApiCore', () => {
 				username: 'activeuser',
 				phone: null,
 				isActive: true,
+				experience: 0,
 			});
 
 			const result = await panelApiCore.authenticatePlayer('token-refresh', {
@@ -325,7 +327,9 @@ describe('PanelApiCore', () => {
 				amountSent: 0,
 			});
 
-			const result = await panelApiCore.debitPlayer(8_744_343, 0, { all: true });
+			const result = await panelApiCore.debitPlayer(8_744_343, 0, {
+				all: true,
+			});
 
 			expect(result.success).toBe(true);
 			expect(adminPanelMock.debitPlayer).toHaveBeenCalledWith('8744343', 0, {

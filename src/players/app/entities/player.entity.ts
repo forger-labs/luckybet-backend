@@ -55,7 +55,7 @@ export class Player extends BaseEntity {
 		nullable: true,
 		name: 'level_id',
 	})
-	levelId: number;
+	levelId?: number;
 
 	@ManyToOne(
 		() => LevelsEntity,
