@@ -1,1 +1,1 @@
-export { UpdateLevelDto } from './level.schema';
+export { UpdateLevelDto, UpdateLevelMultipartDto } from './level.schema';

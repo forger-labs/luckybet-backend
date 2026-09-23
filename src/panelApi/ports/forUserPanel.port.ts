@@ -3,10 +3,11 @@ import type {
 	LuckyBetTerminalInfoContent,
 } from '@/src/types/luckybetResponse';
 import type {
-	LuckyBetGameItem,
+
 	LuckyBetLoginResponse,
 	PlayerLastPlayedGameResult,
 } from '../types/userPanel.types';
+import { LuckyBetGameItem } from '../app/dtos/game.schema';
 
 export interface ForUserPanel {
 	/**

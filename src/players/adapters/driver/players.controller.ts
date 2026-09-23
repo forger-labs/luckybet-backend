@@ -10,6 +10,7 @@ import {
 	Patch,
 	Post,
 	Query,
+	Req,
 	UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,11 +19,12 @@ import {
 	ApiOkResponse,
 	ApiQuery,
 } from '@nestjs/swagger';
+import type { FastifyRequest } from 'fastify';
 
 import { JwtGuard } from '@/src/auth/app/guards/jwt.guard';
-import { CurrentPlayer } from '@/src/shared/panelApi/app/decorators/currentPlayer.decorator';
-import { PlayerTokenGuard } from '@/src/shared/panelApi/app/guards/playerToken.guard';
-import type { PlayerAuthContext } from '@/src/shared/panelApi/types/panelApiCore.types';
+import { CurrentPlayer } from '@/src/panelApi/app/decorators/currentPlayer.decorator';
+import { PlayerTokenGuard } from '@/src/panelApi/app/guards/playerToken.guard';
+import type { PlayerAuthContext } from '@/src/panelApi/types/panelApiCore.types';
 import {
 	buildPaginatedResponse,
 	buildResponse,
@@ -30,6 +32,11 @@ import {
 import { PLAYER_CORE_PROVIDER } from '../../app/constants';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
 import { PlayerListResponseDto, PlayerResponseDto } from '../../app/dto/player.schema';
+import {
+	PlayerGameHistoryResponseDto,
+	PlayerLastPlayedGameResponseDto,
+	PlayerPlayedGamesFilterDto,
+} from '../../app/dto/player-games.dto';
 import { UpdatePlayerDto } from '../../app/dto/update-player.dto';
 import type { ForManagePlayers } from '../../ports/driven/ForManagePlayers';
 
@@ -46,7 +53,6 @@ export class PlayersController {
 	@ApiCreatedResponse({ type: PlayerResponseDto })
 	async create(@Body() createPlayerDto: CreatePlayerDto) {
 		const player = await this.playersCore.createPlayer(createPlayerDto);
-
 		return buildResponse(player, 'Player created successfully', true);
 	}
 
@@ -74,6 +80,51 @@ export class PlayersController {
 		);
 	}
 
+	@Get('me')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerResponseDto })
+	me(@CurrentPlayer() player: PlayerAuthContext) {
+		return buildResponse(player, 'Success', true);
+	}
+
+	@Get('me/last-game')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerLastPlayedGameResponseDto })
+	async getLastGame(
+		@CurrentPlayer() _player: PlayerAuthContext,
+		@Req() req: FastifyRequest,
+	) {
+		const token = this.extractTokenFromRequest(req);
+		const result = await this.playersCore.getLastPlayedGame(token);
+		return buildResponse(result, 'Último juego obtenido exitosamente', true);
+	}
+
+	@Get('me/games')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerGameHistoryResponseDto })
+	@ApiQuery({ name: 'days', required: false, type: Number })
+	@ApiQuery({ name: 'limit', required: false, type: Number })
+	@ApiQuery({ name: 'from', required: false, type: String })
+	@ApiQuery({ name: 'to', required: false, type: String })
+	@ApiQuery({ name: 'provider', required: false, type: String })
+	@ApiQuery({ name: 'gameName', required: false, type: String })
+	@ApiQuery({ name: 'forceRefresh', required: false, type: Boolean })
+	async getGames(
+		@CurrentPlayer() player: PlayerAuthContext,
+		@Query() filter: PlayerPlayedGamesFilterDto,
+		@Req() req: FastifyRequest,
+	) {
+		const token = this.extractTokenFromRequest(req);
+		const result = await this.playersCore.getPlayedGames(player, {
+			...filter,
+			token,
+		});
+		return buildResponse(result, 'Historial de juegos obtenido exitosamente', true);
+	}
+
 	@Get(':id')
 	@HttpCode(HttpStatus.OK)
 	@UseGuards(JwtGuard)
@@ -92,14 +143,26 @@ export class PlayersController {
 		@Body() updatePlayerDto: UpdatePlayerDto,
 	) {
 		const player = await this.playersCore.updatePlayerById(id, updatePlayerDto);
-
 		return buildResponse(player, 'Player editado exitosamente', true);
 	}
 
-	@Get('me')
-	@UseGuards(PlayerTokenGuard)
-	@ApiOkResponse({ type: PlayerResponseDto })
-	me(@CurrentPlayer() player: PlayerAuthContext) {
-		return buildResponse(player, 'Success', true);
+	private extractTokenFromRequest(req: FastifyRequest): string {
+		const authHeader = req.headers?.authorization;
+		if (authHeader && typeof authHeader === 'string') {
+			const [scheme, token] = authHeader.split(' ');
+			if (scheme?.toLowerCase() === 'bearer' && token) {
+				return token.trim();
+			}
+			return authHeader.trim();
+		}
+		const playerTokenHeader = req.headers?.['x-player-token'];
+		if (playerTokenHeader && typeof playerTokenHeader === 'string') {
+			return playerTokenHeader.trim();
+		}
+		const queryToken = (req.query as Record<string, unknown>)?.token;
+		if (queryToken && typeof queryToken === 'string') {
+			return queryToken.trim();
+		}
+		return '';
 	}
 }

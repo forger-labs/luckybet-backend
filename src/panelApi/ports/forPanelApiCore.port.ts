@@ -9,6 +9,7 @@ import type {
 	AuthenticatePlayerOptions,
 	PlayerAuthContext,
 } from '../types/panelApiCore.types';
+import type { PlayerLastPlayedGameResult } from '../types/userPanel.types';
 
 export interface ForPanelApiCore {
 	/**
@@ -48,6 +49,11 @@ export interface ForPanelApiCore {
 		amount: number,
 		options?: LuckyBetBalanceMutationOptions,
 	): Promise<LuckyBetBalanceMutationResult>;
+
+	/**
+	 * Retrieves the currently active or last played game for a player token.
+	 */
+	getLastPlayedGame(token: string): Promise<PlayerLastPlayedGameResult | null>;
 
 	/**
 	 * Retrieves deduplicated played games for a user within a time period,

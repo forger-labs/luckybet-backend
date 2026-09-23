@@ -13,6 +13,8 @@ import {
 	UseGuards,
 } from '@nestjs/common';
 import {
+	ApiBody,
+	ApiConsumes,
 	ApiCookieAuth,
 	ApiCreatedResponse,
 	ApiOkResponse,
@@ -26,11 +28,11 @@ import { buildPaginatedResponse, buildResponse } from '@/src/shared/libs/buildRe
 import { AdminRoles } from '@/src/users/app/entities/user.entity';
 import { LEVELS_CORE_PROVIDER } from '../../app/constants';
 import {
-	CreateLevelDto,
+	CreateLevelMultipartDto,
 	LevelFilterDto,
 	LevelListResponseDto,
 	LevelResponseDto,
-	UpdateLevelDto,
+	UpdateLevelMultipartDto,
 } from '../../app/dto/level.schema';
 import type { ForManageLevels } from '../../ports/drivens/forManageLevels';
 
@@ -47,7 +49,24 @@ export class LevelsController {
 	@Roles(AdminRoles.SUPER_ADMIN)
 	@HttpCode(HttpStatus.CREATED)
 	@ApiCreatedResponse({ type: LevelResponseDto })
-	async create(@Body() createLevelDto: CreateLevelDto) {
+	@ApiConsumes('multipart/form-data')
+	@ApiBody({
+		schema: {
+			type: 'object',
+			required: ['name', 'minExperience', 'coins', 'image'],
+			properties: {
+				name: { type: 'string' },
+				minExperience: { type: 'number' },
+				coins: { type: 'number' },
+				bonus: {
+					type: 'string',
+					enum: ['0', '30', '40', '50', '100', '150', '200'],
+				},
+				image: { type: 'string', format: 'binary' },
+			},
+		},
+	})
+	async create(@Body() createLevelDto: CreateLevelMultipartDto) {
 		const level = await this.levelsCore.createLevel(createLevelDto);
 		return buildResponse(level, 'Nivel creado exitosamente', true);
 	}
@@ -58,9 +77,25 @@ export class LevelsController {
 	@Roles(AdminRoles.SUPER_ADMIN)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: LevelResponseDto })
+	@ApiConsumes('multipart/form-data')
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				name: { type: 'string' },
+				minExperience: { type: 'number' },
+				coins: { type: 'number' },
+				bonus: {
+					type: 'string',
+					enum: ['0', '30', '40', '50', '100', '150', '200'],
+				},
+				image: { type: 'string', format: 'binary' },
+			},
+		},
+	})
 	async update(
 		@Param('id', ParseIntPipe) id: number,
-		@Body() updateLevelDto: UpdateLevelDto,
+		@Body() updateLevelDto: UpdateLevelMultipartDto,
 	) {
 		const level = await this.levelsCore.updateLevel(id, updateLevelDto);
 		return buildResponse(level, 'Nivel actualizado exitosamente', true);
@@ -77,6 +112,12 @@ export class LevelsController {
 	@ApiQuery({ name: 'maxCoins', required: false, type: Number })
 	@ApiQuery({ name: 'minExperience', required: false, type: Number })
 	@ApiQuery({ name: 'maxExperience', required: false, type: Number })
+	@ApiQuery({
+		name: 'sortOrder',
+		required: false,
+		enum: ['ASC', 'DESC'],
+		description: 'Orden por experiencia mínima (ASC o DESC, por defecto ASC)',
+	})
 	async findAll(
 		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
 		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,

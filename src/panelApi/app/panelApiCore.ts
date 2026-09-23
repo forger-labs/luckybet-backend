@@ -6,6 +6,7 @@ import {
 	Injectable,
 	Logger,
 	NotFoundException,
+	Optional,
 	UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -13,8 +14,10 @@ import { ConfigService } from '@nestjs/config';
 import { PlayerRepoService } from '@/src/players/adapters/driven/PlayerRepo.service';
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
 import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
-import { CACHE_PORT } from '../../cache/constants';
-import type { ForCache } from '../../cache/ports/forCache.port';
+import { STORAGE_SERVICE } from '@/src/shared/storage/storage.constants';
+import type { StorageService } from '@/src/shared/storage/storage.port';
+import { CACHE_PORT } from '../../shared/cache/constants';
+import type { ForCache } from '../../shared/cache/ports/forCache.port';
 import {
 	DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS,
 	FOR_ADMIN_PANEL,
@@ -34,6 +37,7 @@ import type {
 	AuthenticatePlayerOptions,
 	PlayerAuthContext,
 } from '../types/panelApiCore.types';
+import type { PlayerLastPlayedGameResult } from '../types/userPanel.types';
 
 @Injectable()
 export class PanelApiCore implements ForPanelApiCore {
@@ -50,6 +54,9 @@ export class PanelApiCore implements ForPanelApiCore {
 		private readonly cache: ForCache,
 		@Inject(PlayerRepoService)
 		private readonly playerRepo: ForDatabasePlayers,
+		@Inject(STORAGE_SERVICE)
+		@Optional()
+		private readonly storage?: StorageService,
 	) {
 		this.sessionTtl = Number(
 			config.get<number | string>(
@@ -57,6 +64,14 @@ export class PanelApiCore implements ForPanelApiCore {
 				DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS,
 			),
 		);
+	}
+
+	private toPublicUrl(key?: string | null): string {
+		if (!key) return '';
+		if (key.startsWith('http://') || key.startsWith('https://')) {
+			return key;
+		}
+		return this.storage ? this.storage.buildPublicUrl(key) : key;
 	}
 
 	/**
@@ -116,7 +131,16 @@ export class PanelApiCore implements ForPanelApiCore {
 			username: playerRecord.username,
 			phone: playerRecord.phone,
 			isActive: playerRecord.isActive,
-			levelId: (playerRecord as unknown as { levelId?: number }).levelId ?? null,
+			levelId: playerRecord.levelId ?? playerRecord.level?.id ?? null,
+			experience: playerRecord.experience ?? 0,
+			level: playerRecord.level
+				? {
+						id: playerRecord.level.id ?? playerRecord.levelId ?? undefined,
+						name: playerRecord.level.name,
+						image: this.toPublicUrl(playerRecord.level.image),
+						minExperience: playerRecord.level.minExperience,
+					}
+				: null,
 			cash,
 			currency,
 			luckyBetId,
@@ -210,6 +234,16 @@ export class PanelApiCore implements ForPanelApiCore {
 	}
 
 	/**
+	 * Retrieves the currently active or last played game for a player token.
+	 */
+	async getLastPlayedGame(token: string): Promise<PlayerLastPlayedGameResult | null> {
+		if (!token || typeof token !== 'string' || !token.trim()) {
+			throw new UnauthorizedException('Token de autenticación no proporcionado');
+		}
+		return await this.userPanel.getLastPlayedGame(token);
+	}
+
+	/**
 	 * Retrieves deduplicated played games for a user within a time period,
 	 * cross-referencing with the game catalog (gameList) to enrich each game with CDN images.
 	 */
@@ -221,13 +255,13 @@ export class PanelApiCore implements ForPanelApiCore {
 
 		// 1. Obtener catálogo completo de juegos (cacheado en Redis)
 		const gameList = await this.userPanel.getGameList(options?.token);
-
 		// 2. Obtener historial deduplicado desde adminPanel
 		const history = await this.adminPanel.getLastPlayedGames(targetId, options);
 
 		// 3. Cruzar cada juego con gameList para inyectar/confirmar imagen del CDN y metadata
-		if (gameList && gameList.length > 0 && history.games?.length > 0) {
-			for (const game of history.games) {
+		let games = history.games;
+		if (gameList && gameList.length > 0 && games?.length > 0) {
+			for (const game of games) {
 				const matched = gameList.find(
 					item =>
 						String(item.id).toLowerCase() === game.gameId.toLowerCase() ||
@@ -247,7 +281,25 @@ export class PanelApiCore implements ForPanelApiCore {
 			}
 		}
 
-		return history;
+		// 4. Aplicar filtros en memoria si se suministran (provider, gameName)
+		if (options?.provider) {
+			const providerQuery = options.provider.toLowerCase().trim();
+			games = games.filter(g => g.provider?.toLowerCase().includes(providerQuery));
+		}
+		if (options?.gameName) {
+			const nameQuery = options.gameName.toLowerCase().trim();
+			games = games.filter(
+				g =>
+					g.gameName.toLowerCase().includes(nameQuery) ||
+					g.gameId.toLowerCase().includes(nameQuery),
+			);
+		}
+
+		return {
+			...history,
+			games,
+			totalUniqueGames: games.length,
+		};
 	}
 
 	/**

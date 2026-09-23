@@ -2,6 +2,8 @@ import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { LevelsModule } from '../levels/levels.module';
+import { FOR_PANEL_API_CORE } from '../panelApi/constants';
+import type { ForPanelApiCore } from '../panelApi/ports/forPanelApiCore.port';
 import { PlayerRepoService } from './adapters/driven/PlayerRepo.service';
 import { PlayersController } from './adapters/driver/players.controller';
 import { PLAYER_CORE_PROVIDER } from './app/constants';
@@ -16,8 +18,9 @@ import { ForDatabasePlayers } from './ports/driver/ForDatabasePlayers';
 		PlayerRepoService,
 		{
 			provide: PLAYER_CORE_PROVIDER,
-			useFactory: (repo: ForDatabasePlayers) => new PlayersCore(repo),
-			inject: [PlayerRepoService],
+			useFactory: (repo: ForDatabasePlayers, panelApi: ForPanelApiCore) =>
+				new PlayersCore(repo, panelApi),
+			inject: [PlayerRepoService, FOR_PANEL_API_CORE],
 		},
 	],
 	exports: [PlayerRepoService, PLAYER_CORE_PROVIDER],

@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
 import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
-import type { ForCache } from '../../cache/ports/forCache.port';
+import type { ForCache } from '../../shared/cache/ports/forCache.port';
 import { PanelApiCore } from '../app/panelApiCore';
 import type { ForAdminPanel } from '../ports/forAdminPanel.port';
 import type { ForUserPanel } from '../ports/forUserPanel.port';
@@ -442,6 +442,73 @@ describe('PanelApiCore', () => {
 				undefined,
 			);
 			expect(result.userId).toBe('8744343');
+		});
+
+		it('should filter games in memory by provider and gameName', async () => {
+			userPanelMock.getGameList.mockResolvedValueOnce([
+				{
+					id: 'game_1',
+					name: 'game_1',
+					title: 'Wolf Gold',
+					provider: 'Pragmatic Play',
+				},
+				{
+					id: 'game_2',
+					name: 'game_2',
+					title: 'Starbust',
+					provider: 'NetEnt',
+				},
+			]);
+
+			adminPanelMock.getLastPlayedGames.mockResolvedValueOnce({
+				userId: '8744343',
+				periodDays: 7,
+				from: '2026-09-14 00:00:00',
+				to: '2026-09-21 00:00:00',
+				totalUniqueGames: 2,
+				games: [
+					{
+						gameId: 'game_1',
+						gameName: 'game_1',
+						lastPlayedAt: '2026-09-21 12:00:00',
+					},
+					{
+						gameId: 'game_2',
+						gameName: 'game_2',
+						lastPlayedAt: '2026-09-21 11:00:00',
+					},
+				],
+			});
+
+			const result = await panelApiCore.getLastPlayedGames('8744343', {
+				provider: 'Pragmatic',
+				gameName: 'Wolf',
+			});
+
+			expect(result.games).toHaveLength(1);
+			expect(result.games[0].gameName).toBe('Wolf Gold');
+			expect(result.totalUniqueGames).toBe(1);
+		});
+	});
+
+	describe('getLastPlayedGame', () => {
+		it('should delegate to userPanel.getLastPlayedGame', async () => {
+			userPanelMock.getLastPlayedGame.mockResolvedValueOnce({
+				gameId: 'sweet_bonanza',
+				gameName: 'Sweet Bonanza',
+				isCurrentlyPlaying: true,
+			});
+
+			const result = await panelApiCore.getLastPlayedGame('token-123');
+
+			expect(result?.gameId).toBe('sweet_bonanza');
+			expect(userPanelMock.getLastPlayedGame).toHaveBeenCalledWith('token-123');
+		});
+
+		it('should throw UnauthorizedException if token is empty', async () => {
+			await expect(panelApiCore.getLastPlayedGame('')).rejects.toThrow(
+				UnauthorizedException,
+			);
 		});
 	});
 });

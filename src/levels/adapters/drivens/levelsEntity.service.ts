@@ -71,13 +71,15 @@ export class LevelsEntityService implements ForDatabaseLevels {
 			where.minExperience = LessThanOrEqual(filters.maxExperience);
 		}
 
+		const orderDirection = filters?.sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+
 		const [levels, count] = await this.levelsRepo.findAndCount({
 			take: limit,
 			skip,
 			where,
 			order: {
-				minExperience: 'ASC',
-				id: 'ASC',
+				minExperience: orderDirection,
+				id: orderDirection,
 			},
 		});
 

@@ -33,7 +33,7 @@ import {
 import { MissionType, StepStatus, UserMissionStatus } from '../../app/enums';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
-@Controller()
+@Controller('missions')
 @ApiCookieAuth()
 export class PlayerMisionesController {
 	constructor(

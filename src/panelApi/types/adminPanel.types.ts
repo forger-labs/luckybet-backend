@@ -104,8 +104,12 @@ export interface PlayedGame {
 }
 
 export interface GetPlayedGamesOptions {
+	from?: string;
+	to?: string;
 	days?: number;
 	limit?: number;
+	provider?: string;
+	gameName?: string;
 	forceRefresh?: boolean;
 }
 

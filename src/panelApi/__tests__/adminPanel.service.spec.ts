@@ -2,8 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { BonusIntern } from '@/src/types/bonus';
-import { CACHE_PORT } from '../../cache/constants';
-import { AdminPanelService } from '../adapters/adminPanel.service';
+import { CACHE_PORT } from '../../shared/cache/constants';
+import { AdminPanelService } from '../adapters/driven/adminPanel.service';
 import {
 	AXIOS_ADMIN_PANEL,
 	LUCKYBET_ADMIN_SESSION_CACHE_KEY,

@@ -4,7 +4,7 @@ import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import type { MissionImageFolder, StorageService, UploadableFile } from './storage.port';
+import type { StorageFolder, StorageService, UploadableFile } from './storage.port';
 
 const STORAGE_CONFIG_KEYS = {
 	endpoint: 'STORAGE_ENDPOINT',
@@ -59,7 +59,7 @@ export class S3StorageAdapter implements StorageService {
 		return `${this.publicBaseUrl}/${key}`;
 	}
 
-	async uploadImage(file: UploadableFile, folder: MissionImageFolder): Promise<string> {
+	async uploadImage(file: UploadableFile, folder: StorageFolder): Promise<string> {
 		const key = this.buildKey(folder, file.filename);
 		await this.client.send(
 			new PutObjectCommand({
@@ -75,7 +75,7 @@ export class S3StorageAdapter implements StorageService {
 
 	async replaceImage(
 		file: UploadableFile,
-		folder: MissionImageFolder,
+		folder: StorageFolder,
 		existingUrl: string,
 	): Promise<string> {
 		const newUrl = await this.uploadImage(file, folder);
@@ -100,7 +100,7 @@ export class S3StorageAdapter implements StorageService {
 		await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
 	}
 
-	private buildKey(folder: MissionImageFolder, filename: string): string {
+	private buildKey(folder: StorageFolder, filename: string): string {
 		const sanitized = filename
 			.toLowerCase()
 			.replace(/[^a-z0-9._-]+/g, '-')

@@ -2,20 +2,10 @@ import type {
 	LuckyBetResponse,
 	LuckyBetTerminalInfoContent,
 } from '@/src/types/luckybetResponse';
+import { LuckyBetGameItem } from '../app/dtos/game.schema';
 
 export interface LuckyBetLoginResponseContent {
 	language?: string;
-	[key: string]: unknown;
-}
-
-export interface LuckyBetGameItem {
-	id: string | number;
-	name?: string;
-	title?: string;
-	provider?: string;
-	img?: string;
-	category?: string;
-	type?: string;
 	[key: string]: unknown;
 }
 

@@ -13,7 +13,7 @@ import { CacheModule } from './shared/cache/cache.module';
 import { buildTypeOrmOptionsFromConfig } from './shared/database/databaseOptions';
 import { RequestLoggerInterceptor } from './shared/interceptors/requestLogger.interceptor';
 import { LoggerModule } from './shared/logger/logger.module';
-import { PanelModule } from './shared/panelApi/panel.module';
+import { PanelModule } from './panelApi/panel.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { UsersModule } from './users/users.module';
 

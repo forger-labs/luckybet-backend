@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import axios from 'axios';
 
-import { CACHE_PORT } from '../../cache/constants';
-import type { ForCache } from '../../cache/ports/forCache.port';
+import { CACHE_PORT } from '../../../shared/cache/constants';
+import type { ForCache } from '../../../shared/cache/ports/forCache.port';
 import {
 	AXIOS_ADMIN_PANEL,
 	DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS,
@@ -13,8 +13,8 @@ import {
 	DEFAULT_PLAYED_GAMES_LIMIT,
 	LUCKYBET_ADMIN_SESSION_CACHE_KEY,
 	LUCKYBET_GAME_CATALOG_CACHE_KEY,
-} from '../constants';
-import type { ForAdminPanel } from '../ports/forAdminPanel.port';
+} from '../../constants';
+import type { ForAdminPanel } from '../../ports/forAdminPanel.port';
 import type {
 	GetPlayedGamesOptions,
 	LuckyBetBalanceMutationOptions,
@@ -27,7 +27,7 @@ import type {
 	LuckyBetSearchUser,
 	PlayedGame,
 	PlayerGameHistoryResult,
-} from '../types/adminPanel.types';
+} from '../../types/adminPanel.types';
 
 @Injectable()
 export class AdminPanelService implements ForAdminPanel {
@@ -174,6 +174,7 @@ export class AdminPanelService implements ForAdminPanel {
 				await this.invalidateSession();
 				sessionId = await this.ensureSession();
 				const retryResponse = await requestFn(sessionId);
+				this.logger.warn(retryResponse);
 				return retryResponse.data;
 			}
 

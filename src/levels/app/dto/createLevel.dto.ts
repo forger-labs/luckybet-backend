@@ -1,1 +1,1 @@
-export { CreateLevelDto } from './level.schema';
+export { CreateLevelDto, CreateLevelMultipartDto } from './level.schema';

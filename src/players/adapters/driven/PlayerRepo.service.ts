@@ -1,9 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { LEVELS_CORE_PROVIDER } from '@/src/levels/app/constants';
 import type { ForManageLevels } from '@/src/levels/ports/drivens/forManageLevels';
+import { STORAGE_SERVICE } from '@/src/shared/storage/storage.constants';
+import type { StorageService } from '@/src/shared/storage/storage.port';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
 import type {
 	PlayerCreateResponse,
@@ -21,7 +23,18 @@ export class PlayerRepoService implements ForDatabasePlayers {
 		private readonly playerModel: Repository<Player>,
 		@Inject(LEVELS_CORE_PROVIDER)
 		private readonly levelsCore: ForManageLevels,
+		@Inject(STORAGE_SERVICE)
+		@Optional()
+		private readonly storage?: StorageService,
 	) {}
+
+	private toPublicUrl(key?: string | null): string {
+		if (!key) return '';
+		if (key.startsWith('http://') || key.startsWith('https://')) {
+			return key;
+		}
+		return this.storage ? this.storage.buildPublicUrl(key) : key;
+	}
 
 	async createPlayer({
 		username,
@@ -106,7 +119,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			level: result.level
 				? {
 						id: result.level.id,
-						image: result.level.image,
+						image: this.toPublicUrl(result.level.image),
 						minExperience: result.level.minExperience,
 						name: result.level.name,
 					}
@@ -128,7 +141,8 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			select: {
 				isActive: true,
 				experience: true,
-				id: true,
+        id: true,
+				username: true,
 				levelId: true,
 				level: {
 					image: true,
@@ -153,7 +167,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 					level: level
 						? {
 								id: level.id,
-								image: level.image,
+								image: this.toPublicUrl(level.image),
 								minExperience: level.minExperience,
 								name: level.name,
 							}
@@ -195,7 +209,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 					level: result.level
 						? {
 								id: result.level.id,
-								image: result.level.image,
+								image: this.toPublicUrl(result.level.image),
 								minExperience: result.level.minExperience,
 								name: result.level.name,
 							}

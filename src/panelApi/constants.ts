@@ -13,6 +13,6 @@ export const LUCKYBET_PLAYER_SESSION_KEY_PREFIX = 'luckybet:session:token:';
 export const DEFAULT_LUCKYBET_SESSION_TTL_SECONDS = 240; // 4 minutes
 export const DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS = 300; // 5 minutes
 export const DEFAULT_LUCKYBET_GAME_CATALOG_TTL_SECONDS = 3600; // 1 hour
-export const DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS = 120; // 2 minutes (token session in Redis)
+export const DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS = 300; // 2 minutes (token session in Redis)
 export const DEFAULT_PLAYED_GAMES_DAYS = 7;
 export const DEFAULT_PLAYED_GAMES_LIMIT = 10;

@@ -96,7 +96,7 @@ describe('LevelsEntityService', () => {
 	});
 
 	describe('findAll', () => {
-		it('should return paginated and filtered levels', async () => {
+		it('should return paginated and filtered levels with order direction', async () => {
 			repoMock.findAndCount.mockResolvedValueOnce([[mockLevelEntity], 1]);
 
 			const [levels, total] = await service.findAll(10, 0, {
@@ -106,6 +106,7 @@ describe('LevelsEntityService', () => {
 				maxCoins: 200,
 				minExperience: 0,
 				maxExperience: 500,
+				sortOrder: 'DESC',
 			});
 
 			expect(levels).toHaveLength(1);
@@ -115,8 +116,8 @@ describe('LevelsEntityService', () => {
 					take: 10,
 					skip: 0,
 					order: {
-						minExperience: 'ASC',
-						id: 'ASC',
+						minExperience: 'DESC',
+						id: 'DESC',
 					},
 				}),
 			);

@@ -8,21 +8,21 @@ import type {
 	LuckyBetResponse,
 	LuckyBetTerminalInfoContent,
 } from '@/src/types/luckybetResponse';
-import { CACHE_PORT } from '../../cache/constants';
-import type { ForCache } from '../../cache/ports/forCache.port';
+import { CACHE_PORT } from '../../../shared/cache/constants';
+import type { ForCache } from '../../../shared/cache/ports/forCache.port';
 import {
 	AXIOS_USER_PANEL,
 	DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS,
 	DEFAULT_LUCKYBET_GAME_CATALOG_TTL_SECONDS,
 	LUCKYBET_GAME_CATALOG_CACHE_KEY,
-} from '../constants';
-import type { ForUserPanel } from '../ports/forUserPanel.port';
+} from '../../constants';
+import type { ForUserPanel } from '../../ports/forUserPanel.port';
 import type {
-	LuckyBetGameItem,
 	LuckyBetLoginResponse,
 	LuckyBetLoginResponseContent,
 	PlayerLastPlayedGameResult,
-} from '../types/userPanel.types';
+} from '../../types/userPanel.types';
+import { LuckyBetGameItem } from '../../app/dtos/game.schema';
 
 @Injectable()
 export class UserPanelService implements ForUserPanel {
@@ -150,7 +150,7 @@ export class UserPanelService implements ForUserPanel {
 		}
 
 		const response = await this.executeCommand<
-			LuckyBetGameItem[] | { games?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
+			LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
 		>('gameList', token ? { token } : {});
 
 		let games: LuckyBetGameItem[] = [];
@@ -158,8 +158,12 @@ export class UserPanelService implements ForUserPanel {
 		if (response.status === 'success' && response.content) {
 			if (Array.isArray(response.content)) {
 				games = response.content;
-			} else if (Array.isArray(response.content.games)) {
-				games = response.content.games;
+			} else if (
+				!Array.isArray(response.content) &&
+				response.content.gameList &&
+				Array.isArray(response.content.gameList)
+			) {
+				games = response.content.gameList;
 			} else if (Array.isArray(response.content.list)) {
 				games = response.content.list;
 			}

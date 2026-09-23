@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
+import type { UploadableFile } from '@/src/shared/storage/storage.port';
 import { BonusIntern } from '@/src/types/bonus';
 import { LEVELS_CORE_PROVIDER } from '../../app/constants';
 import type { LevelType } from '../../app/dto/level.schema';
@@ -10,10 +11,16 @@ describe('LevelsController', () => {
 	let controller: LevelsController;
 	let coreMock: jest.Mocked<ForManageLevels>;
 
+	const mockFile: UploadableFile = {
+		buffer: Buffer.from('img'),
+		filename: 'level.png',
+		mimetype: 'image/png',
+	};
+
 	const mockLevel: LevelType = {
 		id: 1,
 		name: 'Nivel Bronce',
-		image: 'https://cdn.example.com/bronze.png',
+		image: 'https://cdn.example.com/levels/bronce.png',
 		minExperience: 0,
 		coins: 100,
 		bonus: BonusIntern.Thirty,
@@ -42,12 +49,12 @@ describe('LevelsController', () => {
 	});
 
 	describe('create', () => {
-		it('should create a level and wrap in standard response', async () => {
+		it('should create a level with multipart payload and wrap in standard response', async () => {
 			coreMock.createLevel.mockResolvedValueOnce(mockLevel);
 
 			const result = await controller.create({
 				name: 'Nivel Bronce',
-				image: 'https://cdn.example.com/bronze.png',
+				image: mockFile,
 				minExperience: 0,
 				coins: 100,
 				bonus: BonusIntern.Thirty,
@@ -56,24 +63,38 @@ describe('LevelsController', () => {
 			expect(result.status).toBe(true);
 			expect(result.data).toEqual(mockLevel);
 			expect(result.message).toBe('Nivel creado exitosamente');
+			expect(coreMock.createLevel).toHaveBeenCalledWith({
+				name: 'Nivel Bronce',
+				image: mockFile,
+				minExperience: 0,
+				coins: 100,
+				bonus: BonusIntern.Thirty,
+			});
 		});
 	});
 
 	describe('update', () => {
-		it('should update a level and wrap in standard response', async () => {
+		it('should update a level with multipart payload and wrap in standard response', async () => {
 			const updated = { ...mockLevel, name: 'Nivel Plata' };
 			coreMock.updateLevel.mockResolvedValueOnce(updated);
 
-			const result = await controller.update(1, { name: 'Nivel Plata' });
+			const result = await controller.update(1, {
+				name: 'Nivel Plata',
+				image: mockFile,
+			});
 
 			expect(result.status).toBe(true);
 			expect(result.data?.name).toBe('Nivel Plata');
 			expect(result.message).toBe('Nivel actualizado exitosamente');
+			expect(coreMock.updateLevel).toHaveBeenCalledWith(1, {
+				name: 'Nivel Plata',
+				image: mockFile,
+			});
 		});
 	});
 
 	describe('findAll', () => {
-		it('should return paginated list of levels', async () => {
+		it('should return paginated list of levels with sortOrder', async () => {
 			coreMock.getLevels.mockResolvedValueOnce({
 				levels: [mockLevel],
 				total: 1,
@@ -81,16 +102,18 @@ describe('LevelsController', () => {
 				skip: 0,
 			});
 
-			const result = await controller.findAll(10, 0, { name: 'Bronce' });
+			const result = await controller.findAll(10, 0, {
+				name: 'Bronce',
+				sortOrder: 'DESC',
+			});
 
 			expect(result.status).toBe(true);
 			expect(result.data).toHaveLength(1);
-			expect(result.meta).toEqual(
-				expect.objectContaining({
-					limit: 10,
-					total: 1,
-				}),
-			);
+			expect(coreMock.getLevels).toHaveBeenCalledWith({
+				take: 10,
+				skip: 0,
+				filter: { name: 'Bronce', sortOrder: 'DESC' },
+			});
 		});
 	});
 

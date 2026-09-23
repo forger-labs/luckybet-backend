@@ -1,13 +1,13 @@
 import type {
-	CreateLevelType,
+	CreateLevelMultipart,
 	LevelsFilter,
 	LevelType,
-	UpdateLevelType,
+	UpdateLevelMultipart,
 } from '../../app/dto/level.schema';
 
 export interface ForManageLevels {
-	createLevel(data: CreateLevelType): Promise<LevelType>;
-	updateLevel(id: number, data: UpdateLevelType): Promise<LevelType>;
+	createLevel(data: CreateLevelMultipart): Promise<LevelType>;
+	updateLevel(id: number, data: UpdateLevelMultipart): Promise<LevelType>;
 	getLevelById(id: number): Promise<LevelType>;
 	getLevels(params: { take?: number; skip?: number; filter?: LevelsFilter }): Promise<{
 		levels: LevelType[];

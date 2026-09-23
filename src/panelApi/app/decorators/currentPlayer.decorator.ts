@@ -9,3 +9,11 @@ export const CurrentPlayer = createParamDecorator(
 		return request.player ?? null;
 	},
 );
+
+
+export const CurrentToken = createParamDecorator(
+	(_data: unknown, ctx: ExecutionContext): string | null => {
+		const request = ctx.switchToHttp().getRequest<RequestWithPlayer>();
+		return request.token ?? null;
+	},
+);

@@ -1,8 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { CACHE_PORT } from '../../cache/constants';
-import { UserPanelService } from '../adapters/userPanel.service';
+import { CACHE_PORT } from '../../shared/cache/constants';
+import { UserPanelService } from '../adapters/driven/userPanel.service';
 import { AXIOS_USER_PANEL, LUCKYBET_GAME_CATALOG_CACHE_KEY } from '../constants';
 
 describe('UserPanelService', () => {

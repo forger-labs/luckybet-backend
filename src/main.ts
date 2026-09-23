@@ -36,7 +36,9 @@ async function bootstrap() {
 	app.useGlobalFilters(new HttpErrorsException());
 	app.useGlobalPipes(new ZodValidationPipe());
 	app.enableCors({
-		origin: configService.get<string>('CORS_ALLOWED', 'http://localhost:4000'),
+		origin: configService
+			.get<string>('CORS_ALLOWED', 'http://localhost:4000')
+			.split(', '),
 		credentials: true,
 	});
 
