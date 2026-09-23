@@ -1,6 +1,7 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
+import type { ForPanelApiCore } from '@/src/panelApi/ports/forPanelApiCore.port';
 import { ForDatabaseUsers } from '@/src/users/ports/driver/ForDatabaseUsers';
 import type { StorageService, UploadableFile } from '../../shared/storage/storage.port';
 import type { ForManageMissions } from '../ports/driven/ForManageMissions';
@@ -39,6 +40,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		private readonly stepRepo: ForDatabaseUserMissionSteps,
 		private readonly userRepo: ForDatabaseUsers,
 		private readonly storage: StorageService,
+		private readonly panelApi?: ForPanelApiCore,
 	) {}
 
 	private toPublicUrl(key: string | null | undefined): string | undefined {
@@ -222,9 +224,18 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		userMissionId: number,
 		stepId: number,
 		data: { submissionText?: string; submissionImage?: UploadableFile },
+		playerId?: number,
 	): Promise<StepSubmission> {
 		const um = await this.userMissionRepo.findByIdWithSteps(userMissionId);
 		if (!um) throw new NotFoundException('Mision de usuario no encontrada');
+
+		if (playerId !== undefined && um.playerId !== playerId) {
+			throw new ForbiddenException('No tienes permiso para modificar esta mision');
+		}
+
+		if (um.status !== UserMissionStatus.IN_PROGRESS) {
+			throw new BadRequestException('La mision de usuario no esta en progreso');
+		}
 
 		const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
 		if (!mission) throw new NotFoundException('Mision no encontrada');
@@ -235,6 +246,12 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		// Validate step order
 		if (stepDef.stepOrder !== um.currentStep) {
 			throw new BadRequestException(`Debes completar el paso ${um.currentStep} primero`);
+		}
+
+		if (stepDef.type === StepType.GAME_PLAY) {
+			throw new BadRequestException(
+				'Este paso es de verificacion automatica (GAME_PLAY). Usa el endpoint de verificacion',
+			);
 		}
 
 		let submissionText: string | undefined;
@@ -269,16 +286,102 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			}));
 	}
 
+	async verifyAutoStep(
+		userMissionId: number,
+		stepId: number,
+		playerId: number,
+		token?: string,
+	): Promise<StepSubmission> {
+		const um = await this.userMissionRepo.findByIdWithSteps(userMissionId);
+		if (!um) throw new NotFoundException('Mision de usuario no encontrada');
+
+		if (um.playerId !== playerId) {
+			throw new ForbiddenException('No tienes permiso para modificar esta mision');
+		}
+
+		if (um.status !== UserMissionStatus.IN_PROGRESS) {
+			throw new BadRequestException('La mision de usuario no esta en progreso');
+		}
+
+		const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
+		if (!mission) throw new NotFoundException('Mision no encontrada');
+
+		const stepDef = mission.steps.find(s => s.id === stepId);
+		if (!stepDef) throw new NotFoundException('Paso no encontrado en la mision');
+
+		if (stepDef.stepOrder !== um.currentStep) {
+			throw new BadRequestException(`Debes completar el paso ${um.currentStep} primero`);
+		}
+
+		if (stepDef.type !== StepType.GAME_PLAY) {
+			throw new BadRequestException('Solo los pasos de tipo GAME_PLAY pueden verificarse automaticamente');
+		}
+
+		if (!this.panelApi) {
+			throw new BadRequestException('Servicio de conexion con panel no disponible');
+		}
+    const now = new Date().getUTCDate();
+    const startedAt = um.startedAt ? um.startedAt.getUTCDate() : 1
+    const days = now - startedAt;
+		const targetConfig = stepDef.targetConfig;
+		const history = await this.panelApi.getLastPlayedGames(playerId, {
+			provider: targetConfig?.provider,
+      gameName: targetConfig?.gameId,
+			days,
+      token,
+      ttl: 150,
+			minBet: stepDef.targetConfig?.minBet ?? 0
+		});
+
+		const minUniqueGames = targetConfig?.minUniqueGames ?? 1;
+		if (history.totalUniqueGames < minUniqueGames) {
+			throw new BadRequestException(
+				`Aun no cumples el requisito: se requieren ${minUniqueGames} juego(s) y tienes ${history.totalUniqueGames}`,
+			);
+    }
+
+    // Mark step approved by system
+		const submission = await this.stepRepo.createOrUpdateSubmission({
+			userMissionId,
+			missionStepId: stepId,
+			submissionText: 'Verificado automaticamente por sistema',
+		});
+
+		await this.stepRepo.reviewStep(
+			submission.id,
+			StepStatus.APPROVED,
+			0,
+			'Aprobado automaticamente por juego en LuckyBet',
+		);
+
+		// Advance user mission or complete
+		const totalSteps = mission.steps.length;
+		if (um.currentStep >= totalSteps) {
+			await this.userMissionRepo.updateStatus(um.id, UserMissionStatus.COMPLETED);
+		} else {
+			await this.userMissionRepo.updateCurrentStep(um.id, um.currentStep + 1);
+		}
+
+		return {
+			...submission,
+			status: StepStatus.APPROVED,
+			reviewedById: 0,
+			reviewedAt: new Date(),
+			reviewerNotes: 'Aprobado automaticamente por juego en LuckyBet',
+		};
+	}
+
 	async reviewStep(
 		stepId: number,
 		status: StepStatus.APPROVED | StepStatus.REJECTED,
 		adminId: number,
 		notes?: string,
 	): Promise<StepSubmission> {
-		const admin = await this.userRepo.findByUnique({ id: adminId });
-
-		if (!admin) throw new BadRequestException('Usuario administrador no encontrado');
-		if (!admin.isActive) throw new BadRequestException('Usuario administrador no activo');
+		if (adminId !== 0) {
+			const admin = await this.userRepo.findByUnique({ id: adminId });
+			if (!admin) throw new BadRequestException('Usuario administrador no encontrado');
+			if (!admin.isActive) throw new BadRequestException('Usuario administrador no activo');
+		}
 
 		const submission = await this.stepRepo.reviewStep(stepId, status, adminId, notes);
 
@@ -322,9 +425,14 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		};
 	}
 
-	async getPlayerMission(id: number): Promise<UserMissionWithSteps> {
+	async getPlayerMission(id: number, playerId?: number): Promise<UserMissionWithSteps> {
 		const um = await this.userMissionRepo.findByIdWithSteps(id);
 		if (!um) throw new NotFoundException('Mision de usuario no encontrada');
+
+		if (playerId !== undefined && um.playerId !== playerId) {
+			throw new ForbiddenException('No tienes permiso para ver esta mision');
+		}
+
 		um.steps = um.steps.map(step => ({
 			...step,
 			submissionImageUrl: this.toPublicUrl(step.submissionImageUrl),
@@ -435,18 +543,30 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			{
 				playerId: number;
 				playerName?: string;
-				missions: Map<number, ReviewQueueByPlayer['missions'][number]>;
+				missions: Map<
+					number,
+					{
+						userMissionId: number;
+						missionId: number;
+						missionTitle: string;
+						missionDescription?: string;
+						missionType: string;
+						coinsAmount: number;
+						experiencePoints: number;
+						userMissionStatus: string;
+						imageUrl?: string;
+						steps: UserMissionStep[];
+					}
+				>;
 			}
 		>();
 
 		for (const um of userMissions) {
-			const steps =
-				stepStatus === undefined
-					? (um.steps ?? [])
-					: (um.steps ?? []).filter(s => s.status === stepStatus);
-			if (stepStatus !== undefined && steps.length === 0) {
-				continue;
-			}
+			const steps = (um.steps ?? []).filter(s =>
+				stepStatus !== undefined ? s.status === stepStatus : true,
+			);
+
+			if (steps.length === 0) continue;
 
 			const playerId = um.playerId;
 
@@ -474,26 +594,30 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			});
 		}
 
-		// Player order = first-encountered order (Map insertion order),
-		// which follows the query order (created_at DESC) — deterministic.
-		return Array.from(byPlayer.values()).map(entry => ({
-			playerId: entry.playerId,
-			playerName: entry.playerName,
-			missions: Array.from(entry.missions.values()),
+		return Array.from(byPlayer.values()).map(player => ({
+			playerId: player.playerId,
+			playerName: player.playerName,
+			missions: Array.from(player.missions.values()).map(mission => ({
+				...mission,
+				steps: mission.steps.map(s => ({
+					id: s.id,
+					userMissionId: s.userMissionId,
+					missionStepId: s.missionStepId,
+					status: s.status,
+					submissionText: s.submissionText,
+					submissionImageUrl: this.toPublicUrl(s.submissionImageUrl),
+					reviewedById: s.reviewedById,
+					reviewedAt: s.reviewedAt,
+					reviewerNotes: s.reviewerNotes,
+				})),
+			})),
 		}));
 	}
 
-	private toQueueStepSubmission(step: UserMissionStep): StepSubmission {
+	private toQueueStepSubmission(step: UserMissionStep): UserMissionStep {
 		return {
-			id: step.id,
-			userMissionId: step.userMissionId,
-			missionStepId: step.missionStepId,
-			status: step.status,
-			submissionText: step.submissionText,
+			...step,
 			submissionImageUrl: this.toPublicUrl(step.submissionImageUrl),
-			reviewedById: step.reviewedById,
-			reviewedAt: step.reviewedAt,
-			reviewerNotes: step.reviewerNotes,
 		};
 	}
 }

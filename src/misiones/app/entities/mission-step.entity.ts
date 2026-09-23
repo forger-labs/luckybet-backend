@@ -5,6 +5,15 @@ import { StepType } from '../enums';
 import { Mission } from './mission.entity';
 import type { UserMissionStep } from './user-mission-step.entity';
 
+export type GamePlayStepConfig = {
+	provider?: string;
+	gameId?: string;
+  minUniqueGames?: number;
+  minBet: number;
+};
+
+export type StepTargetConfig = GamePlayStepConfig & Record<string, unknown>;
+
 @Entity('mission_steps')
 @Index(['missionId', 'stepOrder'], { unique: true })
 export class MissionStep extends BaseEntity {
@@ -19,6 +28,9 @@ export class MissionStep extends BaseEntity {
 
 	@Column({ type: 'text', nullable: true })
 	content?: string;
+
+	@Column({ type: 'jsonb', nullable: true, name: 'target_config' })
+	targetConfig?: StepTargetConfig | null;
 
 	// Relationships
 	@ManyToOne(() => Mission, { onDelete: 'CASCADE' })

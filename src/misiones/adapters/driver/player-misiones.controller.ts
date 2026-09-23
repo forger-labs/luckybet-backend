@@ -9,16 +9,20 @@ import {
 	ParseIntPipe,
 	Post,
 	Query,
+	UseGuards,
 } from '@nestjs/common';
 import {
 	ApiBody,
 	ApiConsumes,
-	ApiCookieAuth,
 	ApiCreatedResponse,
+	ApiHeader,
 	ApiOkResponse,
 	ApiQuery,
 } from '@nestjs/swagger';
 
+import { CurrentPlayer, CurrentToken } from '../../../panelApi/app/decorators/currentPlayer.decorator';
+import { PlayerTokenGuard } from '../../../panelApi/app/guards/playerToken.guard';
+import type { PlayerAuthContext } from '../../../panelApi/types/panelApiCore.types';
 import {
 	buildPaginatedResponse,
 	buildResponse,
@@ -26,33 +30,36 @@ import {
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
 import { SubmitStepMultipartDto } from '../../app/dto/create-mission.dto';
 import {
-	PlayerMissionsQueueResponseDto,
 	StepResponseDto,
 	UserMissionResponseDto,
 } from '../../app/dto/mission.schema';
-import { MissionType, StepStatus, UserMissionStatus } from '../../app/enums';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
 @Controller('missions')
-@ApiCookieAuth()
+@UseGuards(PlayerTokenGuard)
+@ApiHeader({
+	name: 'Authorization',
+	description: 'Bearer {playerToken} o x-player-token header',
+	required: true,
+})
 export class PlayerMisionesController {
 	constructor(
 		@Inject(MISIONES_CORE_PROVIDER)
 		private readonly misionesCore: ForManagePlayerMissions,
 	) {}
 
-	@Post('players/:playerId/missions/:missionId/start')
+	@Post(':missionId/start')
 	@HttpCode(HttpStatus.CREATED)
 	@ApiCreatedResponse({ type: UserMissionResponseDto })
 	async startMission(
-		@Param('playerId', ParseIntPipe) playerId: number,
 		@Param('missionId', ParseIntPipe) missionId: number,
+		@CurrentPlayer() player: PlayerAuthContext,
 	) {
-		const result = await this.misionesCore.startMission(playerId, missionId);
+		const result = await this.misionesCore.startMission(player.id, missionId);
 		return buildResponse(result, 'Mision iniciada exitosamente', true);
 	}
 
-	@Post('players/:playerId/missions/:userMissionId/steps/:stepId/submit')
+	@Post('user-missions/:userMissionId/steps/:stepId/submit')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: StepResponseDto })
 	@ApiConsumes('multipart/form-data')
@@ -69,22 +76,46 @@ export class PlayerMisionesController {
 		@Param('userMissionId', ParseIntPipe) userMissionId: number,
 		@Param('stepId', ParseIntPipe) stepId: number,
 		@Body() dto: SubmitStepMultipartDto,
+		@CurrentPlayer() player: PlayerAuthContext,
 	) {
-		const result = await this.misionesCore.submitStep(userMissionId, stepId, dto);
+		const result = await this.misionesCore.submitStep(
+			userMissionId,
+			stepId,
+			dto,
+			player.id,
+		);
 		return buildResponse(result, 'Paso enviado exitosamente', true);
 	}
 
-	@Get('players/:playerId/missions')
+	@Post('user-missions/:userMissionId/steps/:stepId/verify')
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: StepResponseDto })
+	async verifyAutoStep(
+		@Param('userMissionId', ParseIntPipe) userMissionId: number,
+		@Param('stepId', ParseIntPipe) stepId: number,
+		@CurrentPlayer() player: PlayerAuthContext,
+		@CurrentToken() token: string | null,
+	) {
+		const result = await this.misionesCore.verifyAutoStep(
+			userMissionId,
+			stepId,
+			player.id,
+			token ?? undefined,
+		);
+		return buildResponse(result, 'Paso automatico verificado exitosamente', true);
+	}
+
+	@Get('my-missions')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: UserMissionResponseDto })
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	async getPlayerMissions(
-		@Param('playerId', ParseIntPipe) playerId: number,
+		@CurrentPlayer() player: PlayerAuthContext,
 		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
 		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
 	) {
-		const response = await this.misionesCore.getPlayerMissions(playerId, {
+		const response = await this.misionesCore.getPlayerMissions(player.id, {
 			take,
 			skip,
 		});
@@ -100,67 +131,14 @@ export class PlayerMisionesController {
 		);
 	}
 
-	@Get('players/:playerId/missions/:userMissionId')
+	@Get('user-missions/:userMissionId')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: UserMissionResponseDto })
-	async getPlayerMission(@Param('userMissionId', ParseIntPipe) userMissionId: number) {
-		const result = await this.misionesCore.getPlayerMission(userMissionId);
+	async getPlayerMission(
+		@Param('userMissionId', ParseIntPipe) userMissionId: number,
+		@CurrentPlayer() player: PlayerAuthContext,
+	) {
+		const result = await this.misionesCore.getPlayerMission(userMissionId, player.id);
 		return buildResponse(result, 'Mision obtenida exitosamente', true);
-	}
-
-	@Get('admin/missions/review-queue')
-	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: PlayerMissionsQueueResponseDto })
-	@ApiQuery({
-		name: 'status',
-		required: false,
-		enum: [...Object.values(StepStatus), ...Object.values(UserMissionStatus)],
-	})
-	@ApiQuery({ name: 'playerId', required: false, type: Number })
-	@ApiQuery({ name: 'experience', required: false, type: Number })
-	@ApiQuery({ name: 'coinsAmount', required: false, type: Number })
-	@ApiQuery({ name: 'type', required: false, enum: MissionType })
-	@ApiQuery({ name: 'take', required: false, type: Number })
-	@ApiQuery({ name: 'skip', required: false, type: Number })
-	async getPlayerMissionsQueue(
-		@Query('status') status?: string,
-		@Query('playerId', new ParseIntPipe({ optional: true })) playerId?: number,
-		@Query('experience', new ParseIntPipe({ optional: true })) experience?: number,
-		@Query('coinsAmount', new ParseIntPipe({ optional: true })) coinsAmount?: number,
-		@Query('type') type?: string,
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
-		const result = await this.misionesCore.getPlayerMissionsQueue({
-			status,
-			playerId,
-			experience,
-			coinsAmount,
-			type,
-			take,
-			skip,
-		});
-		return buildPaginatedResponse(
-			result.players,
-			'Cola de revision obtenida exitosamente',
-			true,
-			{ skip: result.skip, limit: result.limit, total: result.total },
-		);
-	}
-
-	@Post('admin/missions/steps/:stepId/review')
-	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: StepResponseDto })
-	async reviewStep(
-		@Param('stepId', ParseIntPipe) stepId: number,
-		@Body() body: { status: 'APPROVED' | 'REJECTED'; reviewerNotes?: string },
-	) {
-		const result = await this.misionesCore.reviewStep(
-			stepId,
-			body.status === 'APPROVED' ? StepStatus.APPROVED : StepStatus.REJECTED,
-			1, // TODO: get from auth context
-			body.reviewerNotes,
-		);
-		return buildResponse(result, 'Revision completada exitosamente', true);
 	}
 }

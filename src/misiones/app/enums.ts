@@ -14,6 +14,7 @@ export enum MissionStatus {
 export enum StepType {
 	IMAGE = 'IMAGE',
 	TEXT = 'TEXT',
+	GAME_PLAY = 'GAME_PLAY',
 }
 
 export enum StepStatus {

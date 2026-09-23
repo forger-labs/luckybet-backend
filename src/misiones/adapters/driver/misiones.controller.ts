@@ -13,6 +13,7 @@ import {
 	Post,
 	Query,
 	Req,
+	UseGuards,
 } from '@nestjs/common';
 import {
 	ApiBody,
@@ -24,27 +25,40 @@ import {
 } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 
+import { JwtGuard } from '../../../auth/app/guards/jwt.guard';
+import { RolesGuard } from '../../../auth/app/guards/roles.guard';
+import { CurrentUser } from '../../../auth/decorators/currentUser.decorator';
+import { Roles } from '../../../auth/decorators/roles.decorator';
 import {
 	buildPaginatedResponse,
 	buildResponse,
 } from '../../../shared/libs/buildResponse';
 import type { UploadableFile } from '../../../shared/storage/storage.port';
+import { AdminRoles, type User } from '../../../users/app/entities/user.entity';
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
 import { CreateMissionMultipartDto } from '../../app/dto/create-mission.dto';
-import { MissionListResponseDto, MissionResponseDto } from '../../app/dto/mission.schema';
+import {
+	MissionListResponseDto,
+	MissionResponseDto,
+	PlayerMissionsQueueResponseDto,
+	StepResponseDto,
+} from '../../app/dto/mission.schema';
 import { UpdateMissionDto } from '../../app/dto/update-mission.dto';
-import type { MissionStatus } from '../../app/enums';
+import { MissionStatus, MissionType, StepStatus, UserMissionStatus } from '../../app/enums';
 import type { ForManageMissions } from '../../ports/driven/ForManageMissions';
+import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
 @Controller('missions')
 @ApiCookieAuth()
 export class MissionsController {
 	constructor(
 		@Inject(MISIONES_CORE_PROVIDER)
-		private readonly misionesCore: ForManageMissions,
+		private readonly misionesCore: ForManageMissions & ForManagePlayerMissions,
 	) {}
 
 	@Post()
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.CREATED)
 	@ApiCreatedResponse({ type: MissionResponseDto })
 	@ApiConsumes('multipart/form-data')
@@ -91,6 +105,67 @@ export class MissionsController {
 		);
 	}
 
+	@Get('admin/review-queue')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerMissionsQueueResponseDto })
+	@ApiQuery({
+		name: 'status',
+		required: false,
+		enum: [...Object.values(StepStatus), ...Object.values(UserMissionStatus)],
+	})
+	@ApiQuery({ name: 'playerId', required: false, type: Number })
+	@ApiQuery({ name: 'experience', required: false, type: Number })
+	@ApiQuery({ name: 'coinsAmount', required: false, type: Number })
+	@ApiQuery({ name: 'type', required: false, enum: MissionType })
+	@ApiQuery({ name: 'take', required: false, type: Number })
+	@ApiQuery({ name: 'skip', required: false, type: Number })
+	async getPlayerMissionsQueue(
+		@Query('status') status?: string,
+		@Query('playerId', new ParseIntPipe({ optional: true })) playerId?: number,
+		@Query('experience', new ParseIntPipe({ optional: true })) experience?: number,
+		@Query('coinsAmount', new ParseIntPipe({ optional: true })) coinsAmount?: number,
+		@Query('type') type?: string,
+		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
+		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+	) {
+		const result = await this.misionesCore.getPlayerMissionsQueue({
+			status,
+			playerId,
+			experience,
+			coinsAmount,
+			type,
+			take,
+			skip,
+		});
+		return buildPaginatedResponse(
+			result.players,
+			'Cola de revision obtenida exitosamente',
+			true,
+			{ skip: result.skip, limit: result.limit, total: result.total },
+		);
+	}
+
+	@Post('admin/steps/:stepId/review')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: StepResponseDto })
+	async reviewStep(
+		@Param('stepId', ParseIntPipe) stepId: number,
+		@Body() body: { status: 'APPROVED' | 'REJECTED'; reviewerNotes?: string },
+		@CurrentUser() admin: User,
+	) {
+		const result = await this.misionesCore.reviewStep(
+			stepId,
+			body.status === 'APPROVED' ? StepStatus.APPROVED : StepStatus.REJECTED,
+			admin.id,
+			body.reviewerNotes,
+		);
+		return buildResponse(result, 'Revision completada exitosamente', true);
+	}
+
 	@Get(':id')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
@@ -100,6 +175,8 @@ export class MissionsController {
 	}
 
 	@Patch(':id')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
 	async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMissionDto) {
@@ -108,6 +185,8 @@ export class MissionsController {
 	}
 
 	@Post(':id/activate')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
 	async activate(@Param('id', ParseIntPipe) id: number) {
@@ -116,6 +195,8 @@ export class MissionsController {
 	}
 
 	@Patch(':id/status')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
 	async changeStatus(
@@ -127,6 +208,8 @@ export class MissionsController {
 	}
 
 	@Post(':id/image')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
 	@ApiConsumes('multipart/form-data')
@@ -148,6 +231,8 @@ export class MissionsController {
 	}
 
 	@Delete(':id/image')
+	@UseGuards(JwtGuard, RolesGuard)
+	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionResponseDto })
 	async deleteImage(@Param('id', ParseIntPipe) id: number) {

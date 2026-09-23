@@ -31,6 +31,14 @@ export interface ForManagePlayerMissions {
 		userMissionId: number,
 		stepId: number,
 		data: { submissionText?: string; submissionImage?: UploadableFile },
+		playerId?: number,
+	): Promise<StepSubmission>;
+
+	verifyAutoStep(
+		userMissionId: number,
+		stepId: number,
+		playerId: number,
+		token?: string,
 	): Promise<StepSubmission>;
 
 	reviewStep(
@@ -50,7 +58,7 @@ export interface ForManagePlayerMissions {
 		skip: number;
 	}>;
 
-	getPlayerMission(id: number): Promise<UserMissionWithSteps>;
+	getPlayerMission(id: number, playerId?: number): Promise<UserMissionWithSteps>;
 
 	getPlayerMissionsQueue(
 		filters: PlayerMissionsQueueFilters,

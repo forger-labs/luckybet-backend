@@ -5,6 +5,7 @@ import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
+import type { StepTargetConfig } from '../entities/mission-step.entity';
 import { MissionStatus, MissionType, StepType } from '../enums';
 
 export const validationMissionMessages = {
@@ -64,7 +65,9 @@ export const validationMissionMessages = {
 	content: {
 		describe: 'Contenido o instruccion del paso',
 	},
-
+	targetConfig: {
+		describe: 'Configuracion de validacion automatica para el paso (ej: GAME_PLAY)',
+	},
 	submissionText: {
 		describe: 'Texto enviado por el jugador',
 	},
@@ -81,6 +84,18 @@ export const validationMissionMessages = {
 	},
 };
 
+// ─── Target Config Schema ──────────────────────────────────────
+export const gamePlayStepConfigSchema = z.object({
+	provider: z.string().optional().describe('Proveedor del juego (ej: Pragmatic Play)'),
+	gameId: z.string().optional().describe('ID o nombre exacto del juego'),
+	minUniqueGames: z.number().int().min(1).optional().describe('Cantidad minima de juegos unicos jugados'),
+});
+
+export const stepTargetConfigSchema = gamePlayStepConfigSchema
+	.passthrough()
+	.optional()
+	.nullable();
+
 // ─── Mission Step Schema ───────────────────────────────────────
 export const createMissionStepSchema = z.object({
 	stepOrder: z
@@ -88,8 +103,9 @@ export const createMissionStepSchema = z.object({
 		.int()
 		.min(1, validationMissionMessages.stepOrder.min)
 		.describe(validationMissionMessages.stepOrder.describe),
-	type: z.enum(StepType).describe('Tipo de paso: IMAGE o TEXT'),
+	type: z.enum(StepType).describe('Tipo de paso: IMAGE, TEXT o GAME_PLAY'),
 	content: z.string().optional().describe(validationMissionMessages.content.describe),
+	targetConfig: stepTargetConfigSchema.describe(validationMissionMessages.targetConfig.describe),
 });
 
 // ─── Base Mission Schema ───────────────────────────────────────
@@ -210,11 +226,9 @@ export const createMissionMultipartSchema = z.object({
 });
 
 // ─── Submit Step Multipart Schema ─────────────────────────────
-// Input schema for POST players/:playerId/missions/:userMissionId/
-// steps/:stepId/submit (multipart/form-data). The image file is
-// attached to the body as { buffer, filename, mimetype } by the
-// global multipart plugin hook. Content is validated against the
-// step type in MisionesCore.
+// Input schema for POST /missions/user-missions/:userMissionId/steps/:stepId/submit
+// (multipart/form-data). The image file is attached to the body as
+// { buffer, filename, mimetype } by the global multipart plugin hook.
 export const submitStepMultipartSchema = z.object({
 	submissionText: z
 		.string()
@@ -260,6 +274,7 @@ export type MissionStepBasic = {
 	stepOrder: number;
 	type: StepType;
 	content?: string;
+	targetConfig?: StepTargetConfig | null;
 };
 
 export type MissionWithSteps = MissionBasic & {

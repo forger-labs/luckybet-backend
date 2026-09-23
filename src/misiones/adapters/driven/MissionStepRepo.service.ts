@@ -28,6 +28,7 @@ export class MissionStepRepoService implements ForDatabaseMissionStep {
 				stepOrder: step.stepOrder,
 				type: step.type,
 				content: step.content,
+				targetConfig: step.targetConfig,
 			}),
 		);
 		const saved = await this.stepModel.save(entities);
@@ -41,6 +42,7 @@ export class MissionStepRepoService implements ForDatabaseMissionStep {
 			stepOrder: step.stepOrder,
 			type: step.type,
 			content: step.content,
+			targetConfig: step.targetConfig ?? null,
 		};
 	}
 }

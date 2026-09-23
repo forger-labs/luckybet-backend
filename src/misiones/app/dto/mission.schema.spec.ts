@@ -82,6 +82,27 @@ describe('createMissionMultipartSchema (Zod)', () => {
 			expect(result.missionSteps[0].stepOrder).toBe(1);
 		});
 
+		it('debería aceptar un paso GAME_PLAY con targetConfig', () => {
+			const result = createMissionMultipartSchema.parse({
+				...baseFields,
+				missionSteps: [
+					{
+						stepOrder: 1,
+						type: 'GAME_PLAY',
+						content: 'Juega 3 partidas',
+						targetConfig: { provider: 'Pragmatic Play', minUniqueGames: 3 },
+					},
+				],
+				image: validImage,
+			});
+			expect(result.missionSteps).toHaveLength(1);
+			expect(result.missionSteps[0].type).toBe('GAME_PLAY');
+			expect(result.missionSteps[0].targetConfig).toEqual({
+				provider: 'Pragmatic Play',
+				minUniqueGames: 3,
+			});
+		});
+
 		it('debería fallar con missionSteps malformado', () => {
 			const result = createMissionMultipartSchema.safeParse({
 				...baseFields,
@@ -168,6 +189,23 @@ describe('createMissionStepSchema (Zod)', () => {
 			imageUrl: 'https://example.com/step.png',
 		});
 		expect(result).not.toHaveProperty('imageUrl');
+	});
+
+	it('debería validar correctamente un paso GAME_PLAY', () => {
+		const result = createMissionStepSchema.parse({
+			stepOrder: 2,
+			type: 'GAME_PLAY',
+			content: 'Jugar Pragmatic Play',
+			targetConfig: {
+				provider: 'Pragmatic Play',
+				minUniqueGames: 2,
+			},
+		});
+		expect(result.type).toBe('GAME_PLAY');
+		expect(result.targetConfig).toEqual({
+			provider: 'Pragmatic Play',
+			minUniqueGames: 2,
+		});
 	});
 });
 

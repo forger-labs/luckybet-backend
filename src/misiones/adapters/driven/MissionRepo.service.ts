@@ -179,6 +179,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 			stepOrder: step.stepOrder,
 			type: step.type,
 			content: step.content,
+			targetConfig: step.targetConfig ?? null,
 		};
 	}
 }

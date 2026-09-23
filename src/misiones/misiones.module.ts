@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { FOR_PANEL_API_CORE } from '../panelApi/constants';
+import { PanelModule } from '../panelApi/panel.module';
+import type { ForPanelApiCore } from '../panelApi/ports/forPanelApiCore.port';
 import { PlayersModule } from '../players/players.module';
 import { STORAGE_SERVICE } from '../shared/storage/storage.constants';
 import type { StorageService } from '../shared/storage/storage.port';
@@ -27,6 +30,7 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 	imports: [
 		UsersModule,
 		PlayersModule,
+		PanelModule,
 		TypeOrmModule.forFeature([Mission, MissionStep, UserMission, UserMissionStep]),
 	],
 	controllers: [MissionsController, PlayerMisionesController],
@@ -43,13 +47,15 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 				stepRepo: ForDatabaseUserMissionSteps,
 				userRepo: ForDatabaseUsers,
 				storage: StorageService,
-			) => new MisionesCore(missionRepo, userMissionRepo, stepRepo, userRepo, storage),
+				panelApi: ForPanelApiCore,
+			) => new MisionesCore(missionRepo, userMissionRepo, stepRepo, userRepo, storage, panelApi),
 			inject: [
 				MissionRepoService,
 				UserMissionRepoService,
 				UserMissionStepRepoService,
 				UserRepoService,
 				STORAGE_SERVICE,
+				FOR_PANEL_API_CORE,
 			],
 		},
 	],
