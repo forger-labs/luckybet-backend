@@ -1,89 +1,168 @@
 import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Inject,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Query,
+	Body,
+	Controller,
+	Get,
+	HttpCode,
+	HttpStatus,
+	Inject,
+	Param,
+	ParseIntPipe,
+	Patch,
+	Post,
+	Query,
+	Req,
+	UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiCreatedResponse, ApiQuery } from '@nestjs/swagger';
-
 import {
-  buildPaginatedResponse,
-  buildResponse,
+	ApiCookieAuth,
+	ApiCreatedResponse,
+	ApiOkResponse,
+	ApiQuery,
+} from '@nestjs/swagger';
+import type { FastifyRequest } from 'fastify';
+
+import { JwtGuard } from '@/src/auth/app/guards/jwt.guard';
+import { CurrentPlayer } from '@/src/panelApi/app/decorators/currentPlayer.decorator';
+import { PlayerTokenGuard } from '@/src/panelApi/app/guards/playerToken.guard';
+import type { PlayerAuthContext } from '@/src/panelApi/types/panelApiCore.types';
+import {
+	buildPaginatedResponse,
+	buildResponse,
 } from '../../../shared/libs/buildResponse';
 import { PLAYER_CORE_PROVIDER } from '../../app/constants';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
+import { PlayerListResponseDto, PlayerResponseDto } from '../../app/dto/player.schema';
 import {
-  PlayerListResponseDto,
-  PlayerResponseDto,
-} from '../../app/dto/player.schema';
+	PlayerGameHistoryResponseDto,
+	PlayerLastPlayedGameResponseDto,
+	PlayerPlayedGamesFilterDto,
+} from '../../app/dto/player-games.dto';
 import { UpdatePlayerDto } from '../../app/dto/update-player.dto';
 import type { ForManagePlayers } from '../../ports/driven/ForManagePlayers';
 
 @Controller('players')
 export class PlayersController {
-  constructor(
-    @Inject(PLAYER_CORE_PROVIDER)
-    private readonly playersCore: ForManagePlayers,
-  ) {}
+	constructor(
+		@Inject(PLAYER_CORE_PROVIDER)
+		private readonly playersCore: ForManagePlayers,
+	) {}
 
-  @Post()
-  @ApiCookieAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiCreatedResponse({ type: PlayerResponseDto })
-  async create(@Body() createPlayerDto: CreatePlayerDto) {
-    const player = await this.playersCore.createPlayer(createPlayerDto);
+	@Post()
+	@ApiCookieAuth()
+	@HttpCode(HttpStatus.CREATED)
+	@ApiCreatedResponse({ type: PlayerResponseDto })
+	async create(@Body() createPlayerDto: CreatePlayerDto) {
+		const player = await this.playersCore.createPlayer(createPlayerDto);
+		return buildResponse(player, 'Player created successfully', true);
+	}
 
-    return buildResponse(player, 'Player created successfully', true);
-  }
+	@Get()
+	@ApiCookieAuth()
+	@HttpCode(HttpStatus.OK)
+	@ApiCreatedResponse({ type: PlayerListResponseDto })
+	@ApiQuery({ name: 'take', required: false, type: Number })
+	@ApiQuery({ name: 'skip', required: false, type: Number })
+	async findAll(
+		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
+		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+	) {
+		const response = await this.playersCore.getPlayers({ take, skip });
 
-  @Get()
-  @ApiCookieAuth()
-  @HttpCode(HttpStatus.OK)
-  @ApiCreatedResponse({ type: PlayerListResponseDto })
-  @ApiQuery({ name: 'take', required: false, type: Number })
-  @ApiQuery({ name: 'skip', required: false, type: Number })
-  async findAll(
-    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
-    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-  ) {
-    const response = await this.playersCore.getPlayers({ take, skip });
+		return buildPaginatedResponse(
+			response.players,
+			'Players obtenidos exitosamente',
+			true,
+			{
+				limit: response.limit,
+				skip: response.skip,
+				total: response.total,
+			},
+		);
+	}
 
-    return buildPaginatedResponse(
-      response.players,
-      'Players obtenidos exitosamente',
-      true,
-      {
-        limit: response.limit,
-        skip: response.skip,
-        total: response.total,
-      },
-    );
-  }
+	@Get('me')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerResponseDto })
+	me(@CurrentPlayer() player: PlayerAuthContext) {
+		return buildResponse(player, 'Success', true);
+	}
 
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiCreatedResponse({ type: PlayerResponseDto })
-  async findOne(@Param('id', new ParseIntPipe({ optional: true })) id: number) {
-    const player = await this.playersCore.findById(id);
-    return buildResponse(player, 'Player obtenido exitosamente', true);
-  }
+	@Get('me/last-game')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerLastPlayedGameResponseDto })
+	async getLastGame(
+		@CurrentPlayer() _player: PlayerAuthContext,
+		@Req() req: FastifyRequest,
+	) {
+		const token = this.extractTokenFromRequest(req);
+		const result = await this.playersCore.getLastPlayedGame(token);
+		return buildResponse(result, 'Último juego obtenido exitosamente', true);
+	}
 
-  @Patch(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiCreatedResponse({ type: PlayerResponseDto })
-  async update(
-    @Param('id', new ParseIntPipe({ optional: true })) id: number,
-    @Body() updatePlayerDto: UpdatePlayerDto,
-  ) {
-    const player = await this.playersCore.updatePlayerById(id, updatePlayerDto);
+	@Get('me/games')
+	@UseGuards(PlayerTokenGuard)
+	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: PlayerGameHistoryResponseDto })
+	@ApiQuery({ name: 'days', required: false, type: Number })
+	@ApiQuery({ name: 'limit', required: false, type: Number })
+	@ApiQuery({ name: 'from', required: false, type: String })
+	@ApiQuery({ name: 'to', required: false, type: String })
+	@ApiQuery({ name: 'provider', required: false, type: String })
+	@ApiQuery({ name: 'gameName', required: false, type: String })
+	@ApiQuery({ name: 'forceRefresh', required: false, type: Boolean })
+	async getGames(
+		@CurrentPlayer() player: PlayerAuthContext,
+		@Query() filter: PlayerPlayedGamesFilterDto,
+		@Req() req: FastifyRequest,
+	) {
+		const token = this.extractTokenFromRequest(req);
+		const result = await this.playersCore.getPlayedGames(player, {
+			...filter,
+			token,
+		});
+		return buildResponse(result, 'Historial de juegos obtenido exitosamente', true);
+	}
 
-    return buildResponse(player, 'Player editado exitosamente', true);
-  }
+	@Get(':id')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtGuard)
+	@ApiCreatedResponse({ type: PlayerResponseDto })
+	async findOne(@Param('id', new ParseIntPipe({ optional: true })) id: number) {
+		const player = await this.playersCore.findById(id);
+		return buildResponse(player, 'Player obtenido exitosamente', true);
+	}
+
+	@Patch(':id')
+	@HttpCode(HttpStatus.OK)
+	@UseGuards(JwtGuard)
+	@ApiCreatedResponse({ type: PlayerResponseDto })
+	async update(
+		@Param('id', new ParseIntPipe({ optional: true })) id: number,
+		@Body() updatePlayerDto: UpdatePlayerDto,
+	) {
+		const player = await this.playersCore.updatePlayerById(id, updatePlayerDto);
+		return buildResponse(player, 'Player editado exitosamente', true);
+	}
+
+	private extractTokenFromRequest(req: FastifyRequest): string {
+		const authHeader = req.headers?.authorization;
+		if (authHeader && typeof authHeader === 'string') {
+			const [scheme, token] = authHeader.split(' ');
+			if (scheme?.toLowerCase() === 'bearer' && token) {
+				return token.trim();
+			}
+			return authHeader.trim();
+		}
+		const playerTokenHeader = req.headers?.['x-player-token'];
+		if (playerTokenHeader && typeof playerTokenHeader === 'string') {
+			return playerTokenHeader.trim();
+		}
+		const queryToken = (req.query as Record<string, unknown>)?.token;
+		if (queryToken && typeof queryToken === 'string') {
+			return queryToken.trim();
+		}
+		return '';
+	}
 }

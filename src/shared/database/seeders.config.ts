@@ -6,8 +6,8 @@ import { buildTypeOrmConnectionOptions } from './databaseOptions';
 config();
 
 export default new DataSource({
-  ...buildTypeOrmConnectionOptions(),
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/shared/database/seeders/coreSeeders.ts'],
-  logging: true,
+	...buildTypeOrmConnectionOptions(),
+	entities: ['src/**/*.entity.ts'],
+	migrations: ['src/shared/database/seeders/coreSeeders.ts'],
+	logging: true,
 });

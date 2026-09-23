@@ -10,21 +10,30 @@ import {
 	Post,
 	Query,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
+import {
+	ApiBody,
+	ApiConsumes,
+	ApiCookieAuth,
+	ApiCreatedResponse,
+	ApiOkResponse,
+	ApiQuery,
+} from '@nestjs/swagger';
 
 import {
 	buildPaginatedResponse,
 	buildResponse,
 } from '../../../shared/libs/buildResponse';
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
+import { SubmitStepMultipartDto } from '../../app/dto/create-mission.dto';
 import {
+	PlayerMissionsQueueResponseDto,
 	StepResponseDto,
 	UserMissionResponseDto,
 } from '../../app/dto/mission.schema';
-import { StepStatus } from '../../app/enums';
+import { MissionType, StepStatus, UserMissionStatus } from '../../app/enums';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
-@Controller()
+@Controller('missions')
 @ApiCookieAuth()
 export class PlayerMisionesController {
 	constructor(
@@ -46,13 +55,22 @@ export class PlayerMisionesController {
 	@Post('players/:playerId/missions/:userMissionId/steps/:stepId/submit')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: StepResponseDto })
+	@ApiConsumes('multipart/form-data')
+	@ApiBody({
+		schema: {
+			type: 'object',
+			properties: {
+				submissionText: { type: 'string' },
+				submissionImage: { type: 'string', format: 'binary' },
+			},
+		},
+	})
 	async submitStep(
 		@Param('userMissionId', ParseIntPipe) userMissionId: number,
 		@Param('stepId', ParseIntPipe) stepId: number,
-		@Body()
-		body: { submissionText?: string; submissionImageUrl?: string },
+		@Body() dto: SubmitStepMultipartDto,
 	) {
-		const result = await this.misionesCore.submitStep(userMissionId, stepId, body);
+		const result = await this.misionesCore.submitStep(userMissionId, stepId, dto);
 		return buildResponse(result, 'Paso enviado exitosamente', true);
 	}
 
@@ -85,19 +103,49 @@ export class PlayerMisionesController {
 	@Get('players/:playerId/missions/:userMissionId')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: UserMissionResponseDto })
-	async getPlayerMission(
-		@Param('userMissionId', ParseIntPipe) userMissionId: number,
-	) {
+	async getPlayerMission(@Param('userMissionId', ParseIntPipe) userMissionId: number) {
 		const result = await this.misionesCore.getPlayerMission(userMissionId);
 		return buildResponse(result, 'Mision obtenida exitosamente', true);
 	}
 
 	@Get('admin/missions/review-queue')
 	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: StepResponseDto })
-	async getReviewQueue() {
-		const result = await this.misionesCore.getReviewQueue();
-		return buildResponse(result, 'Cola de revision obtenida exitosamente', true);
+	@ApiOkResponse({ type: PlayerMissionsQueueResponseDto })
+	@ApiQuery({
+		name: 'status',
+		required: false,
+		enum: [...Object.values(StepStatus), ...Object.values(UserMissionStatus)],
+	})
+	@ApiQuery({ name: 'playerId', required: false, type: Number })
+	@ApiQuery({ name: 'experience', required: false, type: Number })
+	@ApiQuery({ name: 'coinsAmount', required: false, type: Number })
+	@ApiQuery({ name: 'type', required: false, enum: MissionType })
+	@ApiQuery({ name: 'take', required: false, type: Number })
+	@ApiQuery({ name: 'skip', required: false, type: Number })
+	async getPlayerMissionsQueue(
+		@Query('status') status?: string,
+		@Query('playerId', new ParseIntPipe({ optional: true })) playerId?: number,
+		@Query('experience', new ParseIntPipe({ optional: true })) experience?: number,
+		@Query('coinsAmount', new ParseIntPipe({ optional: true })) coinsAmount?: number,
+		@Query('type') type?: string,
+		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
+		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+	) {
+		const result = await this.misionesCore.getPlayerMissionsQueue({
+			status,
+			playerId,
+			experience,
+			coinsAmount,
+			type,
+			take,
+			skip,
+		});
+		return buildPaginatedResponse(
+			result.players,
+			'Cola de revision obtenida exitosamente',
+			true,
+			{ skip: result.skip, limit: result.limit, total: result.total },
+		);
 	}
 
 	@Post('admin/missions/steps/:stepId/review')

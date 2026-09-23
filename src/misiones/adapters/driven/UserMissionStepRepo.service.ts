@@ -62,7 +62,7 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 		const steps = await this.stepModel.find({
 			where: { userMissionId },
 		});
-		return steps.map((s) => this.toSubmission(s));
+		return steps.map(s => this.toSubmission(s));
 	}
 
 	async reviewStep(
@@ -81,14 +81,6 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 
 		const saved = await this.stepModel.save(step);
 		return this.toSubmission(saved);
-	}
-
-	async findPendingReviews(): Promise<StepSubmission[]> {
-		const steps = await this.stepModel.find({
-			where: { status: StepStatus.PENDING },
-			order: { created_at: 'ASC' },
-		});
-		return steps.map((s) => this.toSubmission(s));
 	}
 
 	private toSubmission(step: UserMissionStep): StepSubmission {
