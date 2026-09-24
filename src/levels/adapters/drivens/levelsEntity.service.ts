@@ -39,8 +39,8 @@ export class LevelsEntityService implements ForDatabaseLevels {
 	): Promise<[LevelType[], number]> {
 		const where: FindOptionsWhere<LevelsEntity> = {};
 
-		if (filters?.bonus) {
-			where.bonus = filters.bonus;
+		if (filters?.roomId) {
+			where.roomId = filters.roomId;
 		}
 		if (filters?.name) {
 			where.name = Like(`%${filters.name}%`);
@@ -103,7 +103,7 @@ export class LevelsEntityService implements ForDatabaseLevels {
 			image: data.image,
 			minExperience: data.minExperience,
 			coins: data.coins,
-			bonus: data.bonus ?? undefined,
+			roomId: data.roomId ?? undefined,
 		});
 		const saved = await this.levelsRepo.save(level);
 		return this.toModel(saved);
@@ -129,7 +129,7 @@ export class LevelsEntityService implements ForDatabaseLevels {
 			image: entity.image,
 			minExperience: entity.minExperience,
 			coins: entity.coins,
-			bonus: entity.bonus ?? undefined,
+			roomId: entity.roomId ?? undefined,
 		};
 	}
 }

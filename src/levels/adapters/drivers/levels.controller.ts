@@ -107,7 +107,7 @@ export class LevelsController {
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	@ApiQuery({ name: 'name', required: false, type: String })
-	@ApiQuery({ name: 'bonus', required: false, type: String })
+	@ApiQuery({ name: 'roomId', required: false, type: Number })
 	@ApiQuery({ name: 'minCoins', required: false, type: Number })
 	@ApiQuery({ name: 'maxCoins', required: false, type: Number })
 	@ApiQuery({ name: 'minExperience', required: false, type: Number })

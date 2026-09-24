@@ -1,8 +1,8 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
 import { Player } from '../../../players/app/entities/player.entity';
+import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
-import { BonusIntern } from '../../../types/bonus';
 
 @Entity('levels')
 export default class LevelsEntity extends BaseEntity {
@@ -34,11 +34,15 @@ export default class LevelsEntity extends BaseEntity {
 	coins: number;
 
 	@Column({
-		type: 'enum',
+		type: 'int',
 		nullable: true,
-		enum: BonusIntern,
+		name: 'room_id',
 	})
-	bonus: BonusIntern;
+	roomId?: number | null;
+
+	@ManyToOne(() => BonusRoom, { nullable: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'room_id' })
+	room?: BonusRoom | null;
 
 	@OneToMany(
 		() => Player,

@@ -57,7 +57,7 @@ export class LevelsCore implements ForManageLevels {
 				name: data.name,
 				minExperience: data.minExperience,
 				coins: data.coins,
-				bonus: data.bonus,
+				roomId: data.roomId,
 				image: imageKey,
 			});
 
@@ -98,7 +98,7 @@ export class LevelsCore implements ForManageLevels {
 			name: data.name,
 			minExperience: data.minExperience,
 			coins: data.coins,
-			bonus: data.bonus,
+			roomId: data.roomId,
 			image: imageKey,
 		});
 

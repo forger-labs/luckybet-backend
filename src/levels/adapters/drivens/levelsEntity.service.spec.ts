@@ -16,7 +16,7 @@ describe('LevelsEntityService', () => {
 		image: 'https://cdn.example.com/bronze.png',
 		minExperience: 0,
 		coins: 100,
-		bonus: BonusIntern.Thirty,
+		roomId: 2,
 		players: [],
 		created_at: new Date(),
 		updated_at: new Date(),
@@ -101,7 +101,7 @@ describe('LevelsEntityService', () => {
 
 			const [levels, total] = await service.findAll(10, 0, {
 				name: 'Bronce',
-				bonus: BonusIntern.Thirty,
+				roomId: 2,
 				minCoins: 50,
 				maxCoins: 200,
 				minExperience: 0,
@@ -134,7 +134,7 @@ describe('LevelsEntityService', () => {
 				image: 'https://cdn.example.com/bronze.png',
 				minExperience: 0,
 				coins: 100,
-				bonus: BonusIntern.Thirty,
+				roomId: 2,
 			});
 
 			expect(result.id).toBe(1);
@@ -143,7 +143,7 @@ describe('LevelsEntityService', () => {
 				image: 'https://cdn.example.com/bronze.png',
 				minExperience: 0,
 				coins: 100,
-				bonus: BonusIntern.Thirty,
+				roomId: 2,
 			});
 			expect(repoMock.save).toHaveBeenCalled();
 		});

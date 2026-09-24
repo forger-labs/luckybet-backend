@@ -29,7 +29,7 @@ describe('LevelsCore', () => {
 		image: 'levels/bronce-key.png',
 		minExperience: 0,
 		coins: 100,
-		bonus: BonusIntern.Thirty,
+		roomId: 2,
 	};
 
 	beforeEach(() => {
@@ -71,7 +71,7 @@ describe('LevelsCore', () => {
 				image: mockFile,
 				minExperience: 0,
 				coins: 100,
-				bonus: BonusIntern.Thirty,
+				roomId: 2,
 			});
 
 			expect(storageMock.uploadImage).toHaveBeenCalledWith(mockFile, 'levels');
@@ -80,7 +80,7 @@ describe('LevelsCore', () => {
 				image: 'levels/bronce-key.png',
 				minExperience: 0,
 				coins: 100,
-				bonus: BonusIntern.Thirty,
+				roomId: 2,
 			});
 			expect(cacheMock.del).toHaveBeenCalledWith(LUCKYBET_LOWEST_LEVEL_CACHE_KEY);
 			expect(result.image).toBe('https://cdn.example.com/levels/bronce-key.png');

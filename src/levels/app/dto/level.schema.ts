@@ -6,7 +6,6 @@ import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '@/src/shared/swagger/apiResponse.schema';
-import { BonusIntern } from '@/src/types/bonus';
 
 export const validationLevelMessages = {
 	name: {
@@ -66,7 +65,7 @@ export const levelFilterSchema = z.object({
 	name: z.string().optional().nullable(),
 	minCoins: z.coerce.number().optional().nullable(),
 	maxCoins: z.coerce.number().optional().nullable(),
-	bonus: z.enum(BonusIntern).optional().nullable(),
+	roomId: z.coerce.number().int().optional().nullable(),
 	minExperience: z.coerce.number().optional().nullable(),
 	maxExperience: z.coerce.number().optional().nullable(),
 	sortOrder: z
@@ -102,11 +101,12 @@ export const levelSchema = z.object({
 		.int()
 		.min(0, validationLevelMessages.coins.number)
 		.describe(validationLevelMessages.coins.describe),
-	bonus: z
-		.enum(BonusIntern)
+	roomId: z
+		.number()
+		.int()
 		.nullable()
 		.optional()
-		.describe(validationLevelMessages.bonuses.describe),
+		.describe("ID de la sala asignada al nivel"),
 });
 
 export const levelSchemaNoID = levelSchema.omit({ id: true });
@@ -128,11 +128,12 @@ export const createLevelMultipartSchema = z.object({
 		.int()
 		.min(0, validationLevelMessages.coins.number)
 		.describe(validationLevelMessages.coins.describe),
-	bonus: z
-		.enum(BonusIntern, validationLevelMessages.bonuses.enum)
+	roomId: z.coerce
+		.number()
+		.int()
 		.nullable()
 		.optional()
-		.describe(validationLevelMessages.bonuses.describe),
+		.describe("ID de la sala asignada al nivel"),
 	image: levelImageSchema,
 });
 
@@ -155,11 +156,12 @@ export const updateLevelMultipartSchema = z.object({
 		.min(0, validationLevelMessages.coins.number)
 		.optional()
 		.describe(validationLevelMessages.coins.describe),
-	bonus: z
-		.enum(BonusIntern, validationLevelMessages.bonuses.enum)
+	roomId: z.coerce
+		.number()
+		.int()
 		.nullable()
 		.optional()
-		.describe(validationLevelMessages.bonuses.describe),
+		.describe("ID de la sala asignada al nivel"),
 	image: levelImageSchema.optional(),
 });
 
@@ -171,7 +173,7 @@ export type CreateLevelMultipart = {
 	name: string;
 	minExperience: number;
 	coins: number;
-	bonus?: BonusIntern | null;
+	roomId?: number | null;
 	image: UploadableFile;
 };
 
@@ -179,7 +181,7 @@ export type UpdateLevelMultipart = {
 	name?: string;
 	minExperience?: number;
 	coins?: number;
-	bonus?: BonusIntern | null;
+	roomId?: number | null;
 	image?: UploadableFile;
 };
 
