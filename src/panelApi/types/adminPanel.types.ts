@@ -90,8 +90,7 @@ export interface LuckyBetGetBalanceOptions {
 	from?: string;
 	to?: string;
 	limit?: number;
-  offset?: number;
-  bonuses?: string;
+	offset?: number;
 }
 
 export interface PlayedGame {
@@ -111,9 +110,7 @@ export interface GetPlayedGamesOptions {
 	limit?: number;
 	provider?: string;
 	gameName?: string;
-  forceRefresh?: boolean;
-  ttl?: number;
-  minBet?: number;
+	forceRefresh?: boolean;
 }
 
 export interface PlayerGameHistoryResult {
@@ -133,8 +130,7 @@ export interface LuckyBetHistorySessionItem {
 	date?: string;
 	time?: string;
 	wager?: number | string;
-  win?: number | string;
-  bet?: number | string;
+	win?: number | string;
 	session?: string;
 	[key: string]: unknown;
 }

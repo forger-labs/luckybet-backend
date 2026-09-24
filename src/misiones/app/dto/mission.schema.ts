@@ -174,11 +174,6 @@ export const missionImageSchema = z
 	);
 
 // ─── Multipart create mission schema ───────────────────────────
-// Input schema for POST /missions (multipart/form-data). Numeric
-// fields arrive as strings and are coerced; missionSteps may come
-// as a JSON string or as an already-parsed array; the image file is
-// attached to the body as { buffer, filename, mimetype } by the
-// global multipart plugin hook.
 export const createMissionMultipartSchema = z.object({
 	title: z
 		.string(validationMissionMessages.title.string)
@@ -226,9 +221,6 @@ export const createMissionMultipartSchema = z.object({
 });
 
 // ─── Submit Step Multipart Schema ─────────────────────────────
-// Input schema for POST /missions/user-missions/:userMissionId/steps/:stepId/submit
-// (multipart/form-data). The image file is attached to the body as
-// { buffer, filename, mimetype } by the global multipart plugin hook.
 export const submitStepMultipartSchema = z.object({
 	submissionText: z
 		.string()
@@ -326,7 +318,6 @@ export type ReviewQueueByPlayer = {
 
 // ─── Swagger Response Schemas ──────────────────────────────────
 export const MissionResponseSchema = apiResponseSchema(createMissionSchema);
-
 export const MissionListResponseSchema = paginatedResponseSchema(createMissionSchema);
 
 const stepSubmissionResponseSchema = z.object({

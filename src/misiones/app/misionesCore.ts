@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
 import type { ForPanelApiCore } from '@/src/panelApi/ports/forPanelApiCore.port';
+import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
+import type { ForManageRewards } from '@/src/rewards/ports/driven/ForManageRewards';
 import { ForDatabaseUsers } from '@/src/users/ports/driver/ForDatabaseUsers';
 import type { StorageService, UploadableFile } from '../../shared/storage/storage.port';
 import type { ForManageMissions } from '../ports/driven/ForManageMissions';
@@ -41,6 +43,8 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		private readonly userRepo: ForDatabaseUsers,
 		private readonly storage: StorageService,
 		private readonly panelApi?: ForPanelApiCore,
+		private readonly playerRepo?: ForDatabasePlayers,
+		private readonly rewardsCore?: ForManageRewards,
 	) {}
 
 	private toPublicUrl(key: string | null | undefined): string | undefined {
@@ -320,17 +324,12 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		if (!this.panelApi) {
 			throw new BadRequestException('Servicio de conexion con panel no disponible');
 		}
-    const now = new Date().getUTCDate();
-    const startedAt = um.startedAt ? um.startedAt.getUTCDate() : 1
-    const days = now - startedAt;
+
 		const targetConfig = stepDef.targetConfig;
 		const history = await this.panelApi.getLastPlayedGames(playerId, {
 			provider: targetConfig?.provider,
-      gameName: targetConfig?.gameId,
-			days,
-      token,
-      ttl: 150,
-			minBet: stepDef.targetConfig?.minBet ?? 0
+			gameName: targetConfig?.gameId,
+			token,
 		});
 
 		const minUniqueGames = targetConfig?.minUniqueGames ?? 1;
@@ -338,9 +337,9 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			throw new BadRequestException(
 				`Aun no cumples el requisito: se requieren ${minUniqueGames} juego(s) y tienes ${history.totalUniqueGames}`,
 			);
-    }
+		}
 
-    // Mark step approved by system
+		// Mark step approved by system
 		const submission = await this.stepRepo.createOrUpdateSubmission({
 			userMissionId,
 			missionStepId: stepId,
@@ -357,7 +356,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		// Advance user mission or complete
 		const totalSteps = mission.steps.length;
 		if (um.currentStep >= totalSteps) {
-			await this.userMissionRepo.updateStatus(um.id, UserMissionStatus.COMPLETED);
+			await this.completeUserMission(um.id, mission, playerId);
 		} else {
 			await this.userMissionRepo.updateCurrentStep(um.id, um.currentStep + 1);
 		}
@@ -395,7 +394,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 
 			const totalSteps = mission.steps.length;
 			if (um.currentStep >= totalSteps) {
-				await this.userMissionRepo.updateStatus(um.id, UserMissionStatus.COMPLETED);
+				await this.completeUserMission(um.id, mission, um.playerId);
 			} else {
 				await this.userMissionRepo.updateCurrentStep(um.id, um.currentStep + 1);
 			}
@@ -405,6 +404,34 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			...submission,
 			submissionImageUrl: this.toPublicUrl(submission.submissionImageUrl),
 		};
+	}
+
+	private async completeUserMission(
+		userMissionId: number,
+		mission: MissionWithSteps,
+		playerId: number,
+	): Promise<void> {
+		// 1. Marcar UserMission como COMPLETED
+		await this.userMissionRepo.updateStatus(userMissionId, UserMissionStatus.COMPLETED);
+
+		// 2. Acreditar experiencia de forma inmediata en Postgres y recalcular nivel
+		if (mission.experiencePoints > 0 && this.playerRepo) {
+			const player = await this.playerRepo.findByUnique({ id: playerId });
+			if (player) {
+				const newExp = (player.experience || 0) + mission.experiencePoints;
+				await this.playerRepo.updatePlayerById(playerId, { experience: newExp });
+			}
+		}
+
+		// 3. Crear registro en el Ledger de Recompensas (RewardsCore)
+		if (this.rewardsCore) {
+			await this.rewardsCore.createReward({
+				userMissionId,
+				playerId,
+				coinsAmount: mission.coinsAmount + (mission.bonus || 0),
+				experiencePoints: mission.experiencePoints,
+			});
+		}
 	}
 
 	async getPlayerMissions(

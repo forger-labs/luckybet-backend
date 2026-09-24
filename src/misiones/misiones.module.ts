@@ -1,10 +1,15 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { FOR_PANEL_API_CORE } from '../panelApi/constants';
 import { PanelModule } from '../panelApi/panel.module';
 import type { ForPanelApiCore } from '../panelApi/ports/forPanelApiCore.port';
+import { PlayerRepoService } from '../players/adapters/driven/PlayerRepo.service';
 import { PlayersModule } from '../players/players.module';
+import type { ForDatabasePlayers } from '../players/ports/driver/ForDatabasePlayers';
+import { REWARDS_CORE_PROVIDER } from '../rewards/app/constants';
+import type { ForManageRewards } from '../rewards/ports/driven/ForManageRewards';
+import { RewardsModule } from '../rewards/rewards.module';
 import { STORAGE_SERVICE } from '../shared/storage/storage.constants';
 import type { StorageService } from '../shared/storage/storage.port';
 import { UserRepoService } from '../users/adapters/driven/UserRepo.service';
@@ -31,6 +36,7 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 		UsersModule,
 		PlayersModule,
 		PanelModule,
+		forwardRef(() => RewardsModule),
 		TypeOrmModule.forFeature([Mission, MissionStep, UserMission, UserMissionStep]),
 	],
 	controllers: [MissionsController, PlayerMisionesController],
@@ -48,7 +54,19 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 				userRepo: ForDatabaseUsers,
 				storage: StorageService,
 				panelApi: ForPanelApiCore,
-			) => new MisionesCore(missionRepo, userMissionRepo, stepRepo, userRepo, storage, panelApi),
+				playerRepo: ForDatabasePlayers,
+				rewardsCore: ForManageRewards,
+			) =>
+				new MisionesCore(
+					missionRepo,
+					userMissionRepo,
+					stepRepo,
+					userRepo,
+					storage,
+					panelApi,
+					playerRepo,
+					rewardsCore,
+				),
 			inject: [
 				MissionRepoService,
 				UserMissionRepoService,
@@ -56,8 +74,11 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 				UserRepoService,
 				STORAGE_SERVICE,
 				FOR_PANEL_API_CORE,
+				PlayerRepoService,
+				REWARDS_CORE_PROVIDER,
 			],
 		},
 	],
+	exports: [MISIONES_CORE_PROVIDER],
 })
 export class MisionesModule {}
