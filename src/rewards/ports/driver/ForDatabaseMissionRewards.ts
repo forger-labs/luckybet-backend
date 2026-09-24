@@ -30,6 +30,7 @@ export interface ForDatabaseMissionRewards {
 		options?: {
 			externalOperationId?: string | null;
 			errorMessage?: string | null;
+			resolvedByAdminId?: number | null;
 			claimedAt?: Date | null;
 		},
 	): Promise<MissionRewardBasic>;

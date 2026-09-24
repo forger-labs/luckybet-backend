@@ -1,5 +1,5 @@
+import type { RewardAction } from '../../app/enums';
 import type { MissionRewardBasic } from '../../app/dto/reward.schema';
-import { RewardAction } from '../../app/enums';
 
 export interface ForManageRewards {
 	createReward(data: {
@@ -21,6 +21,7 @@ export interface ForManageRewards {
 	resolveUncertainReward(
 		rewardId: number,
 		action: RewardAction,
+		adminId: number,
 		options?: { externalOperationId?: string; adminNotes?: string },
 	): Promise<MissionRewardBasic>;
 }

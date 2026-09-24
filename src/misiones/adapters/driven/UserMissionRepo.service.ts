@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, Repository } from 'typeorm';
 
 import type {
 	StepSubmission,
@@ -106,6 +106,20 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 		const updated = await this.userMissionModel.findOne({ where: { id } });
 		// biome-ignore lint/style/noNonNullAssertion: we verify mission in core
 		return this.toBasic(updated!);
+	}
+
+	countCompletedBetween(
+		playerId: number,
+		startDate: Date,
+		endDate: Date,
+	): Promise<number> {
+		return this.userMissionModel.count({
+			where: {
+				playerId,
+				status: UserMissionStatus.COMPLETED,
+				completedAt: Between(startDate, endDate),
+			},
+		});
 	}
 
 	private toBasic(um: UserMission): UserMissionBasic {

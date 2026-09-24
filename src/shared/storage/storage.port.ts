@@ -15,8 +15,8 @@ export interface StorageService {
 	replaceImage(
 		file: UploadableFile,
 		folder: StorageFolder,
-		existingUrl: string,
+		existingKeyOrUrl: string,
 	): Promise<string>;
 
-	deleteImage(url: string): Promise<void>;
+	deleteImage(keyOrUrl: string): Promise<void>;
 }

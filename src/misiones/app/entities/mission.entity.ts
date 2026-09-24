@@ -5,6 +5,7 @@ import { User } from '../../../users/app/entities/user.entity';
 import { MissionStatus, MissionType } from '../enums';
 import type { MissionStep } from './mission-step.entity';
 import type { UserMission } from './user-mission.entity';
+import { BonusIntern } from '@/src/types/bonus';
 
 @Entity('missions')
 export class Mission extends BaseEntity {
@@ -27,8 +28,8 @@ export class Mission extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'coins_amount' })
 	coinsAmount!: number;
 
-	@Column({ type: 'int', nullable: true })
-	bonus?: number;
+	@Column({ type: 'enum', enum: BonusIntern, nullable: true })
+	bonus?: BonusIntern;
 
 	@Column({ type: 'int', nullable: false, name: 'experience_points' })
 	experiencePoints!: number;

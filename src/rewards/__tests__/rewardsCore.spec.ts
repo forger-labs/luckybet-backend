@@ -127,15 +127,16 @@ describe('RewardsCore', () => {
 			status: RewardStatus.TIMEOUT_UNCERTAIN,
 		};
 
-		it('debería resolver como CLAIMED con RESOLVE_CLAIMED sin llamar a creditPlayer', async () => {
+		it('debería resolver como CLAIMED con RESOLVE_CLAIMED guardando resolvedByAdminId', async () => {
 			mockRewardRepo.findById.mockResolvedValue(uncertainReward);
 			mockRewardRepo.updateStatus.mockResolvedValue({
 				...uncertainReward,
 				status: RewardStatus.CLAIMED,
 				externalOperationId: '9999',
+				resolvedByAdminId: 2,
 			});
 
-			const result = await rewardsCore.resolveUncertainReward(1, 'RESOLVE_CLAIMED', {
+			const result = await rewardsCore.resolveUncertainReward(1, 'RESOLVE_CLAIMED', 2, {
 				externalOperationId: '9999',
 				adminNotes: 'Verificado manualmente',
 			});
@@ -144,12 +145,13 @@ describe('RewardsCore', () => {
 			expect(mockRewardRepo.updateStatus).toHaveBeenCalledWith(1, RewardStatus.CLAIMED, {
 				externalOperationId: '9999',
 				errorMessage: 'Resuelto: Verificado manualmente',
+				resolvedByAdminId: 2,
 				claimedAt: expect.any(Date),
 			});
 			expect(result.status).toBe(RewardStatus.CLAIMED);
 		});
 
-		it('debería ejecutar creditPlayer con FORCE_RETRY', async () => {
+		it('debería ejecutar creditPlayer con FORCE_RETRY guardando resolvedByAdminId', async () => {
 			mockRewardRepo.findById.mockResolvedValue(uncertainReward);
 			mockPanelApi.creditPlayer.mockResolvedValue({
 				success: true,
@@ -159,13 +161,15 @@ describe('RewardsCore', () => {
 				...uncertainReward,
 				status: RewardStatus.CLAIMED,
 				externalOperationId: '12345',
+				resolvedByAdminId: 2,
 			});
 
-			const result = await rewardsCore.resolveUncertainReward(1, 'FORCE_RETRY');
+			const result = await rewardsCore.resolveUncertainReward(1, 'FORCE_RETRY', 2);
 
 			expect(mockPanelApi.creditPlayer).toHaveBeenCalledWith(5, 500);
 			expect(mockRewardRepo.updateStatus).toHaveBeenCalledWith(1, RewardStatus.CLAIMED, {
 				externalOperationId: '12345',
+				resolvedByAdminId: 2,
 				claimedAt: expect.any(Date),
 			});
 			expect(result.status).toBe(RewardStatus.CLAIMED);

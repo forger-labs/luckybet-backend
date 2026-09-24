@@ -71,7 +71,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 	}): Promise<[MissionRewardBasic[], number]> {
 		const [rewards, count] = await this.rewardModel.findAndCount({
 			where: { status: RewardStatus.TIMEOUT_UNCERTAIN },
-			relations: { userMission: { mission: true, player: true } },
+			relations: { userMission: { mission: true, player: true }, resolvedByAdmin: true },
 			order: { updated_at: 'DESC' },
 			take: params?.take ?? 50,
 			skip: params?.skip ?? 0,
@@ -106,6 +106,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 		options?: {
 			externalOperationId?: string | null;
 			errorMessage?: string | null;
+			resolvedByAdminId?: number | null;
 			claimedAt?: Date | null;
 		},
 	): Promise<MissionRewardBasic> {
@@ -113,6 +114,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			status,
 			externalOperationId: options?.externalOperationId,
 			errorMessage: options?.errorMessage,
+			resolvedByAdminId: options?.resolvedByAdminId,
 			claimedAt: options?.claimedAt,
 		});
 
@@ -131,6 +133,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			status: reward.status,
 			externalOperationId: reward.externalOperationId,
 			errorMessage: reward.errorMessage,
+			resolvedByAdminId: reward.resolvedByAdminId,
 			claimedAt: reward.claimedAt,
 			missionTitle: reward.userMission?.mission?.title,
 		};

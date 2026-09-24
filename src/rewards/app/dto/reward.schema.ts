@@ -22,6 +22,7 @@ export const missionRewardSchema = z.object({
 	status: z.enum(RewardStatus),
 	externalOperationId: z.string().nullable().optional(),
 	errorMessage: z.string().nullable().optional(),
+	resolvedByAdminId: z.number().int().nullable().optional(),
 	claimedAt: z.date().nullable().optional(),
 	missionTitle: z.string().optional(),
 });
@@ -35,6 +36,7 @@ export type MissionRewardBasic = {
 	status: RewardStatus;
 	externalOperationId?: string | null;
 	errorMessage?: string | null;
+	resolvedByAdminId?: number | null;
 	claimedAt?: Date | null;
 	missionTitle?: string;
 };

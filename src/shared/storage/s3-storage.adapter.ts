@@ -89,11 +89,15 @@ export class S3StorageAdapter implements StorageService {
 		return newUrl;
 	}
 
-	async deleteImage(url: string): Promise<void> {
-		const key = this.extractKeyFromUrl(url);
+	async deleteImage(keyOrUrl: string): Promise<void> {
+		if (!keyOrUrl.trim()) return;
+		const key = keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")
+			? this.extractKeyFromUrl(keyOrUrl)
+			: keyOrUrl.replace(/^\/+/, "");
+
 		if (!key) {
 			this.logger.warn(
-				`La URL no pertenece a este bucket, se omite la eliminacion: ${url}`,
+				`La URL no pertenece a este bucket, se omite la eliminacion: ${keyOrUrl}`,
 			);
 			return;
 		}

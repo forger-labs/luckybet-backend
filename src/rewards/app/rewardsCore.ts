@@ -95,7 +95,6 @@ export class RewardsCore implements ForManageRewards {
         );
       }
 
-      // Si devolvió success: false de forma sincrónica y limpia
       this.logger.error(
         `Error en panel LuckyBet al acreditar fichas: ${mutation.errorMessage}`,
       );
@@ -107,7 +106,6 @@ export class RewardsCore implements ForManageRewards {
         },
       );
     } catch (error) {
-      // En caso de timeout, corte de socket o excepción HTTP de red
       this.logger.error(
         `Fallo de conexion o timeout con LuckyBet para reward ${locked.id}:`,
         error,
@@ -150,6 +148,7 @@ export class RewardsCore implements ForManageRewards {
   async resolveUncertainReward(
     rewardId: number,
     action: RewardAction,
+    adminId: number,
     options?: { externalOperationId?: string; adminNotes?: string },
   ): Promise<MissionRewardBasic> {
     const reward = await this.rewardRepo.findById(rewardId);
@@ -170,6 +169,7 @@ export class RewardsCore implements ForManageRewards {
         errorMessage: options?.adminNotes
           ? `Resuelto: ${options.adminNotes}`
           : undefined,
+        resolvedByAdminId: adminId,
         claimedAt: new Date(),
       });
     }
@@ -186,6 +186,7 @@ export class RewardsCore implements ForManageRewards {
           RewardStatus.CLAIMED,
           {
             externalOperationId: mutation.operationId ?? null,
+            resolvedByAdminId: adminId,
             claimedAt: new Date(),
           },
         );

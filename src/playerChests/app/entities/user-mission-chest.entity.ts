@@ -1,25 +1,24 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
-import { Mission } from '../../../misiones/app/entities/mission.entity';
-import { UserMission } from '../../../misiones/app/entities/user-mission.entity';
+import { MissionChest } from '../../../chests/app/entities/mission-chest.entity';
+import { RewardStatus } from '../../../rewards/app/enums';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { User } from '../../../users/app/entities/user.entity';
-import { RewardStatus } from '../enums';
 
-@Entity('mission_rewards')
-@Index(['playerId', 'status'])
-export class MissionReward extends BaseEntity {
-	@Column({ type: 'int', unique: true, nullable: false, name: 'user_mission_id' })
-	userMissionId!: number;
-
+@Entity('user_mission_chests')
+@Index(['playerId', 'chestId', 'periodKey'], { unique: true })
+export class UserMissionChest extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'player_id' })
 	playerId!: number;
 
-	@Column({ type: 'int', nullable: false, name: 'coins_amount', default: 0 })
-	coinsAmount!: number;
+	@Column({ type: 'int', nullable: false, name: 'chest_id' })
+	chestId!: number;
 
-	@Column({ type: 'int', nullable: false, name: 'experience_points', default: 0 })
-	experiencePoints!: number;
+	@Column({ type: 'varchar', length: 50, nullable: false, name: 'period_key' })
+	periodKey!: string;
+
+	@Column({ type: 'int', nullable: false, default: 0, name: 'completed_missions_count' })
+	completedMissionsCount!: number;
 
 	@Column({
 		type: 'enum',
@@ -42,9 +41,9 @@ export class MissionReward extends BaseEntity {
 	claimedAt?: Date | null;
 
 	// Relationships
-	@OneToOne(() => UserMission, { onDelete: 'RESTRICT' })
-	@JoinColumn({ name: 'user_mission_id' })
-	userMission!: UserMission;
+	@ManyToOne(() => MissionChest, { onDelete: 'RESTRICT' })
+	@JoinColumn({ name: 'chest_id' })
+	chest!: MissionChest;
 
 	@ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
 	@JoinColumn({ name: 'resolved_by_admin_id' })
