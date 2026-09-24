@@ -72,5 +72,11 @@ export interface ForPanelApiCore {
 	/**
 	 * Computes the SHA-256 hash of a raw token for secure Redis cache lookup.
 	 */
-	hashToken(token: string): string;
+  hashToken(token: string): string;
+
+ 	changePlayerSenior(
+		userId: string | number,
+		seniorName: string,
+	): Promise<boolean>
+
 }

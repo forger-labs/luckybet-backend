@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import axios from 'axios';
 
 import { PlayersModule } from '@/src/players/players.module';
+import { RoomsModule } from '../rooms/rooms.module';
 import { AdminPanelService } from './adapters/driven/adminPanel.service';
 import { UserPanelService } from './adapters/driven/userPanel.service';
 import { PanelController } from './adapters/driver/luckyPanel.controller';
@@ -18,7 +19,7 @@ import {
 
 @Global()
 @Module({
-  imports: [PlayersModule],
+  imports: [PlayersModule, RoomsModule],
   controllers: [PanelController],
   providers: [
     {

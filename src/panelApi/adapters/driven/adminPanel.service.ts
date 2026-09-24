@@ -31,6 +31,62 @@ import type {
 
 @Injectable()
 export class AdminPanelService implements ForAdminPanel {
+	/**
+	 * Retrieves the current senior/room login of a player via area=useredit.
+	 */
+	async getPlayerSenior(userId: string | number): Promise<string | null> {
+		const url = `${this.panelHost}/index.php?act=admin&area=useredit&id=${userId}&response=js`;
+
+		try {
+			const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
+				return this.client.get<Record<string, unknown>>(url, {
+					headers: {
+						Accept: "application/json",
+						Cookie: `PHPSESSID=${String(sessionId)}`,
+					},
+				});
+			});
+
+			const fields = data.fields as Record<string, { value?: string }> | undefined;
+			const senior = fields?.create_login?.value;
+			return senior ? String(senior).trim() : null;
+		} catch (error) {
+			const errorMsg: string = error instanceof Error ? error.message : "Unknown error";
+			this.logger.error("Error al obtener senior del jugador " + String(userId) + ": " + errorMsg);
+			return null;
+		}
+	}
+	/**
+	 * Changes the player senior/room in LuckyBet via area=useredit.
+	 */
+	async changePlayerSenior(
+		userId: string | number,
+		seniorName: string,
+	): Promise<boolean> {
+		const url = `${this.panelHost}/index.php?act=admin&area=useredit&id=${userId}&response=js`;
+		const params = new URLSearchParams();
+		params.append("send", "true");
+		params.append("create_login", seniorName);
+		params.append("note", "");
+		params.append("name", "");
+
+		const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
+			return this.client.post<Record<string, unknown>>(url, params.toString(), {
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+					Accept: "application/json",
+					Cookie: `PHPSESSID=${String(sessionId)}`,
+				},
+			});
+		});
+
+		if (data.error || data.errorMessage) {
+			this.logger.error(`Fallo al cambiar senior de usuario ${userId} a ${seniorName}: ${data.error || data.errorMessage}`);
+			return false;
+		}
+
+		return true;
+	}
 	private readonly logger = new Logger(AdminPanelService.name);
 	private readonly panelHost: string;
 	private readonly adminLogin: string;
