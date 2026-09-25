@@ -15,7 +15,7 @@ import {
 	LevelType,
 	UpdateLevelType,
 } from '../../app/dto/level.schema';
-import LevelsEntity from '../../app/entities/levels.entity';
+import { LevelsEntity } from '../../app/entities/levels.entity';
 import type { ForDatabaseLevels } from '../../ports/drivers/forDatabaseLevels';
 
 @Injectable()

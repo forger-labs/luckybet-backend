@@ -9,7 +9,7 @@ import type { StorageService } from '../shared/storage/storage.port';
 import { LevelsEntityService } from './adapters/drivens/levelsEntity.service';
 import { LevelsController } from './adapters/drivers/levels.controller';
 import { LEVELS_CORE_PROVIDER } from './app/constants';
-import LevelsEntity from './app/entities/levels.entity';
+import { LevelsEntity } from './app/entities/levels.entity';
 import { LevelsCore } from './app/levelsCore';
 import type { ForDatabaseLevels } from './ports/drivers/forDatabaseLevels';
 

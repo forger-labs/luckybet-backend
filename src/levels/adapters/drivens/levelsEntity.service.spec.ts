@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
 import { BonusIntern } from '@/src/types/bonus';
-import LevelsEntity from '../../app/entities/levels.entity';
+import { LevelsEntity } from '../../app/entities/levels.entity';
 import { LevelsEntityService } from '../drivens/levelsEntity.service';
 
 describe('LevelsEntityService', () => {

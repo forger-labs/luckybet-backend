@@ -5,7 +5,7 @@ import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 
 @Entity('levels')
-export default class LevelsEntity extends BaseEntity {
+export class LevelsEntity extends BaseEntity {
 	@Column({
 		type: 'varchar',
 		nullable: false,

@@ -106,7 +106,7 @@ export const levelSchema = z.object({
 		.int()
 		.nullable()
 		.optional()
-		.describe("ID de la sala asignada al nivel"),
+		.describe('ID de la sala asignada al nivel'),
 });
 
 export const levelSchemaNoID = levelSchema.omit({ id: true });
@@ -133,7 +133,7 @@ export const createLevelMultipartSchema = z.object({
 		.int()
 		.nullable()
 		.optional()
-		.describe("ID de la sala asignada al nivel"),
+		.describe('ID de la sala asignada al nivel'),
 	image: levelImageSchema,
 });
 
@@ -161,7 +161,7 @@ export const updateLevelMultipartSchema = z.object({
 		.int()
 		.nullable()
 		.optional()
-		.describe("ID de la sala asignada al nivel"),
+		.describe('ID de la sala asignada al nivel'),
 	image: levelImageSchema.optional(),
 });
 
