@@ -44,7 +44,12 @@ import {
 	StepResponseDto,
 } from '../../app/dto/mission.schema';
 import { UpdateMissionDto } from '../../app/dto/update-mission.dto';
-import { MissionStatus, MissionType, StepStatus, UserMissionStatus } from '../../app/enums';
+import {
+	MissionStatus,
+	MissionType,
+	StepStatus,
+	UserMissionStatus,
+} from '../../app/enums';
 import type { ForManageMissions } from '../../ports/driven/ForManageMissions';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
@@ -71,7 +76,7 @@ export class MissionsController {
 				description: { type: 'string' },
 				type: { type: 'string', enum: ['DAILY', 'WEEKLY', 'FIXED'] },
 				coinsAmount: { type: 'string' },
-				bonus: { type: 'string' },
+				roomId: { type: 'number' },
 				experiencePoints: { type: 'string' },
 				missionSteps: { type: 'string' },
 				image: { type: 'string', format: 'binary' },

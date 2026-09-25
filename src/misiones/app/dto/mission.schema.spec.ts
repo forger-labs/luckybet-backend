@@ -31,13 +31,14 @@ describe('createMissionMultipartSchema (Zod)', () => {
 			expect(typeof result.coinsAmount).toBe('number');
 		});
 
-		it('debería aceptar bonus opcional convertido de string a number', () => {
+		it('debería aceptar roomId opcional y convertirlo a number', () => {
 			const result = createMissionMultipartSchema.parse({
 				...baseFields,
-				bonus: '50',
+				roomId: '2',
 				image: validImage,
 			});
-			expect(result.bonus).toBe(50);
+			expect(result.roomId).toBe(2);
+			expect(typeof result.roomId).toBe('number');
 		});
 
 		it('debería rechazar un valor no numérico en coinsAmount', () => {

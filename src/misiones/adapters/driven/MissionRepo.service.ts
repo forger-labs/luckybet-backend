@@ -85,7 +85,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 				steps: true,
 			},
 			select: {
-				bonus: true,
+				roomId: true,
 				coinsAmount: true,
 				description: true,
 				experiencePoints: true,
@@ -164,7 +164,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 			type: mission.type,
 			status: mission.status,
 			coinsAmount: mission.coinsAmount,
-			bonus: mission.bonus,
+			roomId: mission.roomId,
 			experiencePoints: mission.experiencePoints,
 			imageUrl: mission.imageUrl,
 			activatedAt: mission.activatedAt,

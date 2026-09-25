@@ -29,12 +29,12 @@ export const updateMissionSchema = z.object({
 		.min(0, validationMissionMessages.coinsAmount.min)
 		.optional()
 		.describe(validationMissionMessages.coinsAmount.describe),
-	bonus: z
-		.number(validationMissionMessages.bonus.int)
+	roomId: z.coerce
+		.number()
 		.int()
-		.min(0, validationMissionMessages.bonus.min)
 		.optional()
-		.describe(validationMissionMessages.bonus.describe),
+		.nullable()
+		.describe('ID de la sala con bono'),
 	experiencePoints: z
 		.number(validationMissionMessages.experiencePoints.int)
 		.int()

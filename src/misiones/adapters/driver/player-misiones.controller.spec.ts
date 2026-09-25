@@ -18,10 +18,10 @@ describe('PlayerMisionesController', () => {
 		username: 'testplayer',
 		phone: '123456789',
 		cash: 100,
-    currency: 'ARS',
-    isActive: true,
-    experience: 0,
-    isNewlyRegistered: false,
+		currency: 'ARS',
+		isActive: true,
+		experience: 0,
+		isNewlyRegistered: false,
 	};
 
 	const mockUserMission = {

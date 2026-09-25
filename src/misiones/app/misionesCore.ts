@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+	BadRequestException,
+	ForbiddenException,
+	NotFoundException,
+} from '@nestjs/common';
 import { FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
 import type { ForPanelApiCore } from '@/src/panelApi/ports/forPanelApiCore.port';
@@ -318,7 +322,9 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		}
 
 		if (stepDef.type !== StepType.GAME_PLAY) {
-			throw new BadRequestException('Solo los pasos de tipo GAME_PLAY pueden verificarse automaticamente');
+			throw new BadRequestException(
+				'Solo los pasos de tipo GAME_PLAY pueden verificarse automaticamente',
+			);
 		}
 
 		if (!this.panelApi) {
@@ -379,7 +385,8 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		if (adminId !== 0) {
 			const admin = await this.userRepo.findByUnique({ id: adminId });
 			if (!admin) throw new BadRequestException('Usuario administrador no encontrado');
-			if (!admin.isActive) throw new BadRequestException('Usuario administrador no activo');
+			if (!admin.isActive)
+				throw new BadRequestException('Usuario administrador no activo');
 		}
 
 		const submission = await this.stepRepo.reviewStep(stepId, status, adminId, notes);
@@ -414,21 +421,21 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		// 1. Marcar UserMission como COMPLETED
 		await this.userMissionRepo.updateStatus(userMissionId, UserMissionStatus.COMPLETED);
 
-		// 2. Acreditar experiencia de forma inmediata en Postgres y recalcular nivel
+		// 2. Acreditar experiencia de forma inmediata y recalcular nivel con actualizacion de sala en LuckyBet
 		if (mission.experiencePoints > 0 && this.playerRepo) {
-			const player = await this.playerRepo.findByUnique({ id: playerId });
-			if (player) {
-				const newExp = (player.experience || 0) + mission.experiencePoints;
-				await this.playerRepo.updatePlayerById(playerId, { experience: newExp });
-			}
+			await this.playerRepo.addExperienceAndRecalculateLevel(
+				playerId,
+				mission.experiencePoints,
+			);
 		}
 
-		// 3. Crear registro en el Ledger de Recompensas (RewardsCore)
+		// 3. Crear registro en el Ledger de Recompensas (RewardsCore) transfiriendo el bono correspondiente
 		if (this.rewardsCore) {
 			await this.rewardsCore.createReward({
 				userMissionId,
 				playerId,
-				coinsAmount: mission.coinsAmount + (mission.bonus || 0),
+				coinsAmount: mission.coinsAmount,
+				roomId: mission.roomId,
 				experiencePoints: mission.experiencePoints,
 			});
 		}

@@ -79,6 +79,12 @@ import type { ForDatabaseUserMissions } from './ports/driver/ForDatabaseUserMiss
 			],
 		},
 	],
-	exports: [MISIONES_CORE_PROVIDER],
+	exports: [
+		MISIONES_CORE_PROVIDER,
+		MissionRepoService,
+		UserMissionRepoService,
+		UserMissionStepRepoService,
+		UserMissionStepRepoService,
+	],
 })
 export class MisionesModule {}

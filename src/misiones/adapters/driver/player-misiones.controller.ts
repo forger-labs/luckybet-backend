@@ -20,7 +20,10 @@ import {
 	ApiQuery,
 } from '@nestjs/swagger';
 
-import { CurrentPlayer, CurrentToken } from '../../../panelApi/app/decorators/currentPlayer.decorator';
+import {
+	CurrentPlayer,
+	CurrentToken,
+} from '../../../panelApi/app/decorators/currentPlayer.decorator';
 import { PlayerTokenGuard } from '../../../panelApi/app/guards/playerToken.guard';
 import type { PlayerAuthContext } from '../../../panelApi/types/panelApiCore.types';
 import {
@@ -29,10 +32,7 @@ import {
 } from '../../../shared/libs/buildResponse';
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
 import { SubmitStepMultipartDto } from '../../app/dto/create-mission.dto';
-import {
-	StepResponseDto,
-	UserMissionResponseDto,
-} from '../../app/dto/mission.schema';
+import { StepResponseDto, UserMissionResponseDto } from '../../app/dto/mission.schema';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
 @Controller('missions')

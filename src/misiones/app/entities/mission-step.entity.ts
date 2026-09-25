@@ -8,8 +8,8 @@ import type { UserMissionStep } from './user-mission-step.entity';
 export type GamePlayStepConfig = {
 	provider?: string;
 	gameId?: string;
-  minUniqueGames?: number;
-  minBet: number;
+	minUniqueGames?: number;
+	minBet: number;
 };
 
 export type StepTargetConfig = GamePlayStepConfig & Record<string, unknown>;
