@@ -65,6 +65,8 @@ async function bootstrap() {
 bootstrap().catch(handleError);
 
 function handleError(error: unknown) {
+	// biome-ignore lint/suspicious/noConsole: fatal bootstrap error log
+	console.error('FATAL BOOTSTRAP ERROR:', error);
 	// eslint-disable-next-line unicorn/no-process-exit
 	process.exit(1);
 }

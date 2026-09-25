@@ -7,6 +7,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './auth/auth.module';
 import { ChestsModule } from './chests/chests.module';
 import { HealthModule } from './health/health.module';
+import { LevelRewardsModule } from './levelRewards/levelRewards.module';
 import { LevelsModule } from './levels/levels.module';
 import { MisionesModule } from './misiones/misiones.module';
 import { PanelModule } from './panelApi/panel.module';
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module';
 		ChestsModule,
 		PlayerChestsModule,
 		LevelsModule,
+		LevelRewardsModule,
 	],
 	providers: [
 		{ provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },

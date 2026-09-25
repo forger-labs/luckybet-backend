@@ -91,9 +91,10 @@ export class S3StorageAdapter implements StorageService {
 
 	async deleteImage(keyOrUrl: string): Promise<void> {
 		if (!keyOrUrl.trim()) return;
-		const key = keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")
-			? this.extractKeyFromUrl(keyOrUrl)
-			: keyOrUrl.replace(/^\/+/, "");
+		const key =
+			keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')
+				? this.extractKeyFromUrl(keyOrUrl)
+				: keyOrUrl.replace(/^\/+/, '');
 
 		if (!key) {
 			this.logger.warn(
