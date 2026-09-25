@@ -20,5 +20,4 @@ export interface ForDatabaseRooms {
 
 	getRooms(filter: RoomQueryFilter): Promise<[RoomBasic[], number]>;
 
-	findActiveRooms(): Promise<RoomBasic[]>;
 }

@@ -46,14 +46,6 @@ export class RoomsController {
 		private readonly roomsCore: ForManageRooms,
 	) {}
 
-	@Get('active')
-	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: ActiveRoomsResponseDto })
-	async getActiveRooms() {
-		const rooms = await this.roomsCore.getActiveRooms();
-		return buildResponse(rooms, 'Salas activas obtenidas exitosamente', true);
-	}
-
 	@Get()
 	@ApiCookieAuth()
 	@UseGuards(JwtGuard, RolesGuard)

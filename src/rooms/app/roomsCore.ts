@@ -85,8 +85,4 @@ export class RoomsCore implements ForManageRooms {
 			skip: filter.skip ?? 0,
 		};
 	}
-
-	getActiveRooms(): Promise<RoomBasic[]> {
-		return this.roomRepo.findActiveRooms();
-	}
 }

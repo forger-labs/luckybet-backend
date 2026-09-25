@@ -21,5 +21,4 @@ export interface ForManageRooms {
 		skip: number;
 	}>;
 
-	getActiveRooms(): Promise<RoomBasic[]>;
 }
