@@ -1,5 +1,9 @@
 import type { UploadableFile } from '../../../shared/storage/storage.port';
-import type { ChestBasic, CreateChestDto, UpdateChestDto } from '../../app/dto/chest.schema';
+import type {
+	ChestBasic,
+	CreateChestDto,
+	UpdateChestDto,
+} from '../../app/dto/chest.schema';
 import type { ChestPeriodType } from '../../app/enums';
 
 export interface ForManageChests {
@@ -21,6 +25,4 @@ export interface ForManageChests {
 		periodType?: ChestPeriodType;
 		isActive?: boolean;
 	}): Promise<{ chests: ChestBasic[]; total: number; limit: number; skip: number }>;
-
-	getActiveChests(): Promise<ChestBasic[]>;
 }

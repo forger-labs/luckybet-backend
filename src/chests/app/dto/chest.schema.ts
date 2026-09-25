@@ -1,5 +1,5 @@
 import { createZodDto } from 'nestjs-zod';
-import  z  from 'zod';
+import { z } from 'zod';
 
 import {
 	apiResponseSchema,
@@ -23,6 +23,9 @@ export const validationChestMessages = {
 	coinsAmount: {
 		int: 'coinsAmount debe ser un numero entero',
 		min: 'Minimo 0 fichas',
+	},
+	bonus: {
+		enum: 'Valores validos de bonus: 0, 30, 40, 50, 100, 150, 200',
 	},
 	experiencePoints: {
 		int: 'experiencePoints debe ser un numero entero',
@@ -62,16 +65,14 @@ export const createChestSchema = z.object({
 		.string()
 		.min(1, validationChestMessages.title.min)
 		.max(200, validationChestMessages.title.max),
-	periodType: z.enum(ChestPeriodType, validationChestMessages.periodType.enum),
 	description: z.string().optional(),
+	periodType: z.enum(ChestPeriodType, validationChestMessages.periodType.enum),
 	requiredMissions: z.coerce
 		.number()
 		.int()
 		.min(1, validationChestMessages.requiredMissions.min),
-	coinsAmount: z.coerce
-		.number()
-		.int()
-		.min(0, validationChestMessages.coinsAmount.min),
+	coinsAmount: z.coerce.number().int().min(0, validationChestMessages.coinsAmount.min),
+	roomId: z.coerce.number().int().optional().nullable(),
 	experiencePoints: z.coerce
 		.number()
 		.int()
@@ -89,6 +90,7 @@ export type ChestBasic = {
 	periodType: ChestPeriodType;
 	requiredMissions: number;
 	coinsAmount: number;
+	roomId?: number | null;
 	experiencePoints: number;
 	imageUrl?: string | null;
 	isActive: boolean;
@@ -103,6 +105,7 @@ export const chestBasicSchema = z.object({
 	periodType: z.enum(ChestPeriodType),
 	requiredMissions: z.number().int(),
 	coinsAmount: z.number().int(),
+	roomId: z.number().int().nullable().optional(),
 	experiencePoints: z.number().int(),
 	imageUrl: z.string().nullable().optional(),
 	isActive: z.boolean(),

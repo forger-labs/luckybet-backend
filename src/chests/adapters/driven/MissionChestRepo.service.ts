@@ -55,14 +55,6 @@ export class MissionChestRepoService implements ForDatabaseChests {
 		return [list.map(c => this.toBasic(c)), count];
 	}
 
-	async findActiveChests(): Promise<ChestBasic[]> {
-		const list = await this.chestModel.find({
-			where: { isActive: true },
-			order: { requiredMissions: 'ASC' },
-		});
-		return list.map(c => this.toBasic(c));
-	}
-
 	private toBasic(chest: MissionChest): ChestBasic {
 		return {
 			id: chest.id,
@@ -71,6 +63,7 @@ export class MissionChestRepoService implements ForDatabaseChests {
 			periodType: chest.periodType,
 			requiredMissions: chest.requiredMissions,
 			coinsAmount: chest.coinsAmount,
+			roomId: chest.roomId,
 			experiencePoints: chest.experiencePoints,
 			imageUrl: chest.imageUrl,
 			isActive: chest.isActive,

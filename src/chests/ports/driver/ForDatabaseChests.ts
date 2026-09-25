@@ -7,6 +7,7 @@ export type CreateChestInput = {
 	periodType: ChestPeriodType;
 	requiredMissions: number;
 	coinsAmount: number;
+	roomId?: number | null;
 	experiencePoints: number;
 	imageUrl?: string | null;
 	isActive?: boolean;
@@ -27,6 +28,4 @@ export interface ForDatabaseChests {
 		periodType?: ChestPeriodType;
 		isActive?: boolean;
 	}): Promise<[ChestBasic[], number]>;
-
-	findActiveChests(): Promise<ChestBasic[]>;
 }

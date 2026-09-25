@@ -1,5 +1,6 @@
 import type { RewardAction } from '../../../rewards/app/enums';
 import type {
+	PlayerChestFilter,
 	PlayerChestProgress,
 	UserMissionChestBasic,
 } from '../../app/dto/player-chest.schema';
@@ -7,12 +8,28 @@ import type {
 export interface ForManagePlayerChests {
 	getPlayerChestsProgress(playerId: number): Promise<PlayerChestProgress[]>;
 
+	getChestProgressById(chestId: number, playerId: number): Promise<PlayerChestProgress>;
+
+	joinChest(chestId: number, playerId: number): Promise<UserMissionChestBasic>;
+
+	listPlayerChests(
+		playerId: number,
+		filter: PlayerChestFilter,
+	): Promise<{
+		claims: UserMissionChestBasic[];
+		total: number;
+		limit: number;
+		skip: number;
+	}>;
+
 	claimChest(chestId: number, playerId: number): Promise<UserMissionChestBasic>;
 
-	getUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<{ claims: UserMissionChestBasic[]; total: number; limit: number; skip: number }>;
+	getUncertainClaims(params?: { take?: number; skip?: number }): Promise<{
+		claims: UserMissionChestBasic[];
+		total: number;
+		limit: number;
+		skip: number;
+	}>;
 
 	resolveUncertainClaim(
 		claimId: number,

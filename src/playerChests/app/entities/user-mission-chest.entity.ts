@@ -2,6 +2,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
 import { MissionChest } from '../../../chests/app/entities/mission-chest.entity';
 import { RewardStatus } from '../../../rewards/app/enums';
+import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { User } from '../../../users/app/entities/user.entity';
 
@@ -19,6 +20,16 @@ export class UserMissionChest extends BaseEntity {
 
 	@Column({ type: 'int', nullable: false, default: 0, name: 'completed_missions_count' })
 	completedMissionsCount!: number;
+
+	@Column({ type: 'int', nullable: false, default: 0, name: 'coins_amount' })
+	coinsAmount!: number;
+
+	@Column({ type: 'int', nullable: true, name: 'room_id' })
+	roomId?: number | null;
+
+	@ManyToOne(() => BonusRoom, { nullable: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'room_id' })
+	room?: BonusRoom | null;
 
 	@Column({
 		type: 'enum',

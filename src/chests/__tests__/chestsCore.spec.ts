@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 import type { StorageService, UploadableFile } from '../../shared/storage/storage.port';
 import { ChestsCore } from '../app/chestsCore';
@@ -17,6 +17,7 @@ describe('ChestsCore', () => {
 		periodType: ChestPeriodType.WEEKLY,
 		requiredMissions: 5,
 		coinsAmount: 500,
+		roomId: 2,
 		experiencePoints: 100,
 		imageUrl: 'chests/chest1.png',
 		isActive: true,
@@ -28,7 +29,6 @@ describe('ChestsCore', () => {
 			findById: jest.fn(),
 			updateChest: jest.fn(),
 			getChests: jest.fn(),
-			findActiveChests: jest.fn(),
 		};
 
 		mockStorage = {
@@ -50,6 +50,7 @@ describe('ChestsCore', () => {
 				periodType: ChestPeriodType.WEEKLY,
 				requiredMissions: 5,
 				coinsAmount: 500,
+				roomId: 2,
 				experiencePoints: 100,
 				isActive: true,
 			});
@@ -59,11 +60,13 @@ describe('ChestsCore', () => {
 				periodType: ChestPeriodType.WEEKLY,
 				requiredMissions: 5,
 				coinsAmount: 500,
+				roomId: 2,
 				experiencePoints: 100,
 				isActive: true,
 				imageUrl: undefined,
 			});
 			expect(result.imageUrl).toBe('https://cdn.example.com/chests/chest1.png');
+			expect(result.roomId).toBe(2);
 		});
 
 		it('debería subir imagen si se suministra un archivo válido', async () => {
@@ -85,6 +88,7 @@ describe('ChestsCore', () => {
 					periodType: ChestPeriodType.WEEKLY,
 					requiredMissions: 5,
 					coinsAmount: 500,
+					roomId: 2,
 					experiencePoints: 100,
 					isActive: true,
 				},
@@ -110,17 +114,7 @@ describe('ChestsCore', () => {
 
 			expect(result.id).toBe(1);
 			expect(result.imageUrl).toBe('https://cdn.example.com/chests/chest1.png');
-		});
-	});
-
-	describe('getActiveChests', () => {
-		it('debería listar los cofres activos', async () => {
-			mockRepo.findActiveChests.mockResolvedValue([mockChest]);
-
-			const result = await core.getActiveChests();
-
-			expect(result).toHaveLength(1);
-			expect(result[0].title).toBe('Cofre Semanal');
+			expect(result.roomId).toBe(2);
 		});
 	});
 });

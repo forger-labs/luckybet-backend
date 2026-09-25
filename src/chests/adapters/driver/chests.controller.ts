@@ -51,14 +51,6 @@ export class ChestsController {
 		private readonly chestsCore: ForManageChests,
 	) {}
 
-	@Get('active')
-	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: ChestListResponseDto })
-	async getActiveChests() {
-		const chests = await this.chestsCore.getActiveChests();
-		return buildResponse(chests, 'Cofres activos obtenidos exitosamente', true);
-	}
-
 	@Get()
 	@ApiCookieAuth()
 	@UseGuards(JwtGuard, RolesGuard)
@@ -110,7 +102,13 @@ export class ChestsController {
 	@ApiBody({
 		schema: {
 			type: 'object',
-			required: ['title', 'periodType', 'requiredMissions', 'coinsAmount', 'experiencePoints'],
+			required: [
+				'title',
+				'periodType',
+				'requiredMissions',
+				'coinsAmount',
+				'experiencePoints',
+			],
 			properties: {
 				title: { type: 'string' },
 				description: { type: 'string' },
@@ -135,10 +133,7 @@ export class ChestsController {
 	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: ChestResponseDto })
-	async updateChest(
-		@Param('id', ParseIntPipe) id: number,
-		@Body() dto: UpdateChestDto,
-	) {
+	async updateChest(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateChestDto) {
 		const chest = await this.chestsCore.updateChest(id, dto);
 		return buildResponse(chest, 'Cofre actualizado exitosamente', true);
 	}
@@ -150,10 +145,7 @@ export class ChestsController {
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: ChestResponseDto })
 	@ApiConsumes('multipart/form-data')
-	async replaceImage(
-		@Param('id', ParseIntPipe) id: number,
-		@Req() req: FastifyRequest,
-	) {
+	async replaceImage(@Param('id', ParseIntPipe) id: number, @Req() req: FastifyRequest) {
 		const file = (req.body as { file?: UploadableFile } | undefined)?.file;
 		if (!file) {
 			throw new BadRequestException('No se recibio ningun archivo');

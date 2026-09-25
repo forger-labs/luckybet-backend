@@ -13,24 +13,20 @@ import { MissionChest } from './app/entities/mission-chest.entity';
 import type { ForDatabaseChests } from './ports/driver/ForDatabaseChests';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([MissionChest]),
-    AuthModule,
-    StorageModule,
-  ],
-  controllers: [ChestsController],
-  providers: [
-    {
-      provide: FOR_DATABASE_CHESTS,
-      useClass: MissionChestRepoService,
-    },
-    {
-      provide: CHESTS_CORE_PROVIDER,
-      useFactory: (chestRepo: ForDatabaseChests, storage: StorageService) =>
-        new ChestsCore(chestRepo, storage),
-      inject: [FOR_DATABASE_CHESTS, STORAGE_SERVICE],
-    },
-  ],
-  exports: [CHESTS_CORE_PROVIDER, FOR_DATABASE_CHESTS],
+	imports: [TypeOrmModule.forFeature([MissionChest]), AuthModule, StorageModule],
+	controllers: [ChestsController],
+	providers: [
+		{
+			provide: FOR_DATABASE_CHESTS,
+			useClass: MissionChestRepoService,
+		},
+		{
+			provide: CHESTS_CORE_PROVIDER,
+			useFactory: (chestRepo: ForDatabaseChests, storage: StorageService) =>
+				new ChestsCore(chestRepo, storage),
+			inject: [FOR_DATABASE_CHESTS, STORAGE_SERVICE],
+		},
+	],
+	exports: [CHESTS_CORE_PROVIDER, FOR_DATABASE_CHESTS],
 })
 export class ChestsModule {}

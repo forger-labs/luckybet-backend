@@ -1,5 +1,6 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
+import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { ChestPeriodType } from '../enums';
 
@@ -26,6 +27,13 @@ export class MissionChest extends BaseEntity {
 
 	@Column({ type: 'int', nullable: false, default: 0, name: 'coins_amount' })
 	coinsAmount!: number;
+
+	@Column({ type: 'int', nullable: true, name: 'room_id' })
+	roomId?: number | null;
+
+	@ManyToOne(() => BonusRoom, { nullable: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'room_id' })
+	room?: BonusRoom | null;
 
 	@Column({ type: 'int', nullable: false, default: 0, name: 'experience_points' })
 	experiencePoints!: number;

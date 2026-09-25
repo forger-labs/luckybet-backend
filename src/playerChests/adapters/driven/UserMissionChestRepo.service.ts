@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsOrder, FindOptionsWhere, Repository } from 'typeorm';
 
 import { RewardStatus } from '../../../rewards/app/enums';
-import type { UserMissionChestBasic } from '../../app/dto/player-chest.schema';
+import {
+	PlayerChestFilter,
+	PlayerChestSortField,
+	SortOrder,
+	type UserMissionChestBasic,
+} from '../../app/dto/player-chest.schema';
 import { UserMissionChest } from '../../app/entities/user-mission-chest.entity';
 import type {
 	CreateUserChestInput,
@@ -34,8 +39,8 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 	}
 
 	/**
-	 * Tries to insert a claim record in PROCESSING status atomically.
-	 * If a record with (playerId, chestId, periodKey) already exists, it fails.
+	 * Intenta insertar o adquirir un reclamo de cofre.
+	 * Por defecto en estado PROCESSING para reclamos.
 	 */
 	async acquireClaimLock(
 		data: CreateUserChestInput,
@@ -46,12 +51,14 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 				chestId: data.chestId,
 				periodKey: data.periodKey,
 				completedMissionsCount: data.completedMissionsCount,
-				status: RewardStatus.PROCESSING,
+				coinsAmount: data.coinsAmount,
+				roomId: data.roomId,
+				status: data.status ?? RewardStatus.PROCESSING,
 			});
 			const saved = await this.claimModel.save(entity);
 			return this.toBasic(saved);
-		} catch  {
-			// Violación de restricción UNIQUE -> ya existe un reclamo para este periodo
+		} catch {
+			// Violación de restricción UNIQUE -> ya existe un registro para este periodo
 			return null;
 		}
 	}
@@ -64,6 +71,7 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 			errorMessage?: string | null;
 			resolvedByAdminId?: number | null;
 			claimedAt?: Date | null;
+			completedMissionsCount?: number;
 		},
 	): Promise<UserMissionChestBasic> {
 		await this.claimModel.update(id, {
@@ -72,11 +80,46 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 			errorMessage: options?.errorMessage,
 			resolvedByAdminId: options?.resolvedByAdminId,
 			claimedAt: options?.claimedAt,
+			...(options?.completedMissionsCount !== undefined
+				? { completedMissionsCount: options.completedMissionsCount }
+				: {}),
 		});
 
 		const updated = await this.claimModel.findOne({ where: { id } });
 		// biome-ignore lint/style/noNonNullAssertion: verified updated
 		return this.toBasic(updated!);
+	}
+
+	async getPlayerChests(
+		playerId: number,
+		filter: PlayerChestFilter,
+	): Promise<[UserMissionChestBasic[], number]> {
+		const where: FindOptionsWhere<UserMissionChest> = { playerId };
+
+		if (filter.chestId) {
+			where.chestId = filter.chestId;
+		}
+		if (filter.status) {
+			where.status = filter.status;
+		}
+		if (filter.periodKey) {
+			where.periodKey = filter.periodKey;
+		}
+
+		const orderField = filter.orderBy ?? PlayerChestSortField.CREATED_AT;
+		const orderDir = filter.orderDirection ?? SortOrder.DESC;
+		const order: FindOptionsOrder<UserMissionChest> = {
+			[orderField]: orderDir,
+		};
+
+		const [list, count] = await this.claimModel.findAndCount({
+			where,
+			order,
+			take: filter.take ?? 50,
+			skip: filter.skip ?? 0,
+		});
+
+		return [list.map(c => this.toBasic(c)), count];
 	}
 
 	async findUncertainClaims(params?: {
@@ -100,11 +143,15 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 			chestId: claim.chestId,
 			periodKey: claim.periodKey,
 			completedMissionsCount: claim.completedMissionsCount,
+			coinsAmount: claim.coinsAmount,
+			roomId: claim.roomId,
 			status: claim.status,
 			externalOperationId: claim.externalOperationId,
 			errorMessage: claim.errorMessage,
 			resolvedByAdminId: claim.resolvedByAdminId,
-			claimedAt: claim.claimedAt,
+			claimedAt: claim.claimedAt ? claim.claimedAt.toISOString() : null,
+			createdAt: claim.created_at ? claim.created_at.toISOString() : undefined,
+			updatedAt: claim.updated_at ? claim.updated_at.toISOString() : undefined,
 		};
 	}
 }
