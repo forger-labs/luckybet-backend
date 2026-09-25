@@ -5,6 +5,7 @@ import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
+import { zDateHelper } from '../../../shared/swagger/date.schema';
 import { BonusIntern } from '../../../types/bonus';
 
 export const validationRoomMessages = {
@@ -28,7 +29,10 @@ export const createRoomSchema = z.object({
 		.enum(BonusIntern, validationRoomMessages.bonus.enum)
 		.default(BonusIntern.Zero)
 		.describe('Bono porcentual que otorga la sala'),
-	isActive: z.coerce.boolean().default(true).describe('Estado activo/inactivo de la sala'),
+	isActive: z.coerce
+		.boolean()
+		.default(true)
+		.describe('Estado activo/inactivo de la sala'),
 });
 
 export const updateRoomSchema = createRoomSchema.partial();
@@ -46,8 +50,8 @@ export const roomBasicSchema = z.object({
 	name: z.string(),
 	bonus: z.enum(BonusIntern),
 	isActive: z.boolean(),
-	createdAt: z.date().optional(),
-	updatedAt: z.date().optional(),
+	createdAt: zDateHelper.optional(),
+	updatedAt: zDateHelper.optional(),
 });
 
 export type RoomBasic = {
@@ -55,8 +59,8 @@ export type RoomBasic = {
 	name: string;
 	bonus: BonusIntern;
 	isActive: boolean;
-	createdAt?: Date;
-	updatedAt?: Date;
+	createdAt?: Date | string;
+	updatedAt?: Date | string;
 };
 
 export type RoomQueryFilter = z.infer<typeof roomQueryFilterSchema>;

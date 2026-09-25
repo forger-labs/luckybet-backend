@@ -76,8 +76,8 @@ export class BonusRoomRepoService implements ForDatabaseRooms {
 			name: room.name,
 			bonus: room.bonus,
 			isActive: room.isActive,
-			createdAt: room.created_at,
-			updatedAt: room.updated_at,
+			createdAt: room.created_at ? room.created_at.toISOString() : undefined,
+			updatedAt: room.updated_at ? room.updated_at.toISOString() : undefined,
 		};
 	}
 }

@@ -103,10 +103,7 @@ export class RoomsController {
 	@Roles(AdminRoles.SUPER_ADMIN)
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: RoomResponseDto })
-	async updateRoom(
-		@Param('id', ParseIntPipe) id: number,
-		@Body() dto: UpdateRoomDto,
-	) {
+	async updateRoom(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomDto) {
 		const room = await this.roomsCore.updateRoom(id, dto);
 		return buildResponse(room, 'Sala actualizada exitosamente', true);
 	}
