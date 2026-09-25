@@ -68,17 +68,30 @@ export const playerSchema = z.object({
 		})
 		.optional()
 		.nullable(),
+	roomId: z.number().int().optional().nullable().describe('ID de la sala asignada'),
+	room: z
+		.object({
+			id: z.number().int(),
+			name: z.string(),
+			bonus: z.string(),
+			isActive: z.boolean(),
+		})
+		.optional()
+		.nullable(),
 });
 
 export const createPlayerSchema = playerSchema.omit({
 	level: true,
 	id: true,
 	experience: true,
+	room: true,
 });
 
 export type Player = z.infer<typeof playerSchema>;
 
-export type PlayerCreateResponse = Required<Omit<Player, 'id' | 'level' | 'levelId'>> & {
+export type PlayerCreateResponse = Required<
+	Omit<Player, 'id' | 'level' | 'levelId' | 'roomId' | 'room'>
+> & {
 	id: number;
 	levelId?: number | null;
 	level?: {
@@ -87,9 +100,18 @@ export type PlayerCreateResponse = Required<Omit<Player, 'id' | 'level' | 'level
 		image: string;
 		minExperience: number;
 	} | null;
+	roomId?: number | null;
+	room?: {
+		id: number;
+		name: string;
+		bonus: string;
+		isActive: boolean;
+	} | null;
 };
 
-export type PlayerResponse = Required<Omit<Player, 'id' | 'level' | 'levelId'>> & {
+export type PlayerResponse = Required<
+	Omit<Player, 'id' | 'level' | 'levelId' | 'roomId' | 'room'>
+> & {
 	id: number;
 	levelId?: number | null;
 	level?: {
@@ -97,6 +119,13 @@ export type PlayerResponse = Required<Omit<Player, 'id' | 'level' | 'levelId'>> 
 		name: string;
 		image: string;
 		minExperience: number;
+	} | null;
+	roomId?: number | null;
+	room?: {
+		id: number;
+		name: string;
+		bonus: string;
+		isActive: boolean;
 	} | null;
 };
 

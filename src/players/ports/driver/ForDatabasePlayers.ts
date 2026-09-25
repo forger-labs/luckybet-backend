@@ -17,4 +17,13 @@ export interface ForDatabasePlayers {
 		id: number,
 		playerData: UpdatePlayerDto,
 	): Promise<PlayerWithoutAudit | null>;
+
+	addExperienceAndRecalculateLevel(
+		playerId: number,
+		expPoints: number,
+	): Promise<{
+		player: PlayerWithoutAudit;
+		upgradedLevel: boolean;
+		newLevelId?: number;
+	}>;
 }

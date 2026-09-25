@@ -49,6 +49,7 @@ describe('PlayersCore', () => {
 			findByUnique: jest.fn(),
 			getPlayers: jest.fn(),
 			updatePlayerById: jest.fn(),
+			addExperienceAndRecalculateLevel: jest.fn(),
 		};
 
 		panelApiCoreMock = {
@@ -60,6 +61,7 @@ describe('PlayersCore', () => {
 			getLastPlayedGames: jest.fn(),
 			invalidatePlayerSession: jest.fn(),
 			hashToken: jest.fn(),
+			changePlayerSenior: jest.fn(),
 		};
 
 		core = new PlayersCore(playersRepoMock, panelApiCoreMock);

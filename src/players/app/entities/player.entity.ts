@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
-import LevelsEntity from '../../../levels/app/entities/levels.entity';
+import { LevelsEntity } from '../../../levels/app/entities/levels.entity';
+import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { User } from '../../../users/app/entities/user.entity';
 
@@ -70,4 +71,15 @@ export class Player extends BaseEntity {
 		default: 0,
 	})
 	experience!: number;
+
+	@Column({
+		type: 'integer',
+		nullable: true,
+		name: 'room_id',
+	})
+	roomId?: number | null;
+
+	@ManyToOne(() => BonusRoom, { nullable: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'room_id' })
+	room?: BonusRoom | null;
 }

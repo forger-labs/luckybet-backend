@@ -6,6 +6,12 @@ import { LEVELS_CORE_PROVIDER } from '@/src/levels/app/constants';
 import type { ForManageLevels } from '@/src/levels/ports/drivens/forManageLevels';
 import { STORAGE_SERVICE } from '@/src/shared/storage/storage.constants';
 import type { StorageService } from '@/src/shared/storage/storage.port';
+import { FOR_DATABASE_LEVEL_REWARDS } from '../../../levelRewards/app/constants';
+import type { ForDatabaseLevelRewards } from '../../../levelRewards/ports/driver/ForDatabaseLevelRewards';
+import { FOR_PANEL_API_CORE } from '../../../panelApi/constants';
+import type { ForPanelApiCore } from '../../../panelApi/ports/forPanelApiCore.port';
+import { FOR_DATABASE_ROOMS } from '../../../rooms/app/constants';
+import type { ForDatabaseRooms } from '../../../rooms/ports/driver/ForDatabaseRooms';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
 import type {
 	PlayerCreateResponse,
@@ -26,6 +32,9 @@ export class PlayerRepoService implements ForDatabasePlayers {
 		@Inject(STORAGE_SERVICE)
 		@Optional()
 		private readonly storage?: StorageService,
+		@Inject(FOR_DATABASE_LEVEL_REWARDS)
+		@Optional()
+		private readonly levelRewardRepo?: ForDatabaseLevelRewards,
 	) {}
 
 	private toPublicUrl(key?: string | null): string {
@@ -41,6 +50,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 		phone,
 		isActive,
 		levelId,
+		roomId,
 	}: CreatePlayerDto): Promise<PlayerCreateResponse> {
 		let assignedLevelId = levelId;
 		let lowestLevelData: {
@@ -69,6 +79,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			isActive,
 			phone: phone ?? undefined,
 			levelId: assignedLevelId ?? undefined,
+			roomId: roomId ?? undefined,
 		});
 		const saved = await this.playerModel.save(player);
 
@@ -80,6 +91,8 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			experience: 0,
 			levelId: saved.levelId ?? null,
 			level: lowestLevelData,
+			roomId: saved.roomId ?? null,
+			room: null,
 		};
 	}
 
@@ -103,6 +116,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			},
 			relations: {
 				level: true,
+				room: true,
 			},
 		});
 		if (!player) {
@@ -125,6 +139,15 @@ export class PlayerRepoService implements ForDatabasePlayers {
 					}
 				: null,
 			levelId: result.levelId ?? null,
+			roomId: result.roomId ?? null,
+			room: result.room
+				? {
+						id: result.room.id,
+						name: result.room.name,
+						bonus: String(result.room.bonus),
+						isActive: result.room.isActive,
+					}
+				: null,
 		};
 	}
 
@@ -138,12 +161,15 @@ export class PlayerRepoService implements ForDatabasePlayers {
 		const [players, count] = await this.playerModel.findAndCount({
 			skip,
 			take,
+			order: { created_at: 'DESC' },
 			select: {
 				isActive: true,
 				experience: true,
-        id: true,
+				id: true,
 				username: true,
+				phone: true,
 				levelId: true,
+				roomId: true,
 				level: {
 					image: true,
 					name: true,
@@ -153,30 +179,99 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			},
 			relations: {
 				level: true,
+				room: true,
 			},
 		});
 
 		return [
-			players.map(
-				({ id, username, isActive, phone, level, levelId, experience }: Player) => ({
-					id,
-					username,
-					phone: phone ?? null,
-					isActive,
-					experience,
-					level: level
-						? {
-								id: level.id,
-								image: this.toPublicUrl(level.image),
-								minExperience: level.minExperience,
-								name: level.name,
-							}
-						: null,
-					levelId: levelId ?? null,
-				}),
-			),
+			players.map(p => ({
+				id: p.id,
+				username: p.username,
+				phone: p.phone ?? null,
+				isActive: p.isActive,
+				experience: p.experience,
+				level: p.level
+					? {
+							id: p.level.id,
+							image: this.toPublicUrl(p.level.image),
+							minExperience: p.level.minExperience,
+							name: p.level.name,
+						}
+					: null,
+				levelId: p.levelId ?? null,
+				roomId: p.roomId ?? null,
+				room: p.room
+					? {
+							id: p.room.id,
+							name: p.room.name,
+							bonus: String(p.room.bonus),
+							isActive: p.room.isActive,
+						}
+					: null,
+			})),
 			count,
 		];
+	}
+
+	async addExperienceAndRecalculateLevel(
+		playerId: number,
+		expPoints: number,
+	): Promise<{
+		player: PlayerWithoutAudit;
+		upgradedLevel: boolean;
+		newLevelId?: number;
+	}> {
+		const player = await this.playerModel.findOne({
+			where: { id: playerId },
+			relations: { level: true, room: true },
+		});
+		if (!player) throw new Error(`Player con ID ${playerId} no encontrado`);
+
+		const newExp = (player.experience || 0) + Math.max(0, expPoints);
+		player.experience = newExp;
+
+		// Obtener todos los niveles ordenados por minExperience DESC para hallar el nivel más alto aplicable
+		const { levels: allLevels } = await this.levelsCore.getLevels({ take: 100, skip: 0 });
+		const sortedLevels = [...allLevels].sort((a, b) => b.minExperience - a.minExperience);
+		const targetLevel =
+			sortedLevels.find(l => newExp >= l.minExperience) || sortedLevels.at(-1);
+
+		let upgradedLevel = false;
+		let newLevelId: number | undefined;
+
+		if (targetLevel && targetLevel.id !== player.levelId) {
+			upgradedLevel = true;
+			player.levelId = targetLevel.id;
+			newLevelId = targetLevel.id;
+
+			// Generar automáticamente el registro de recompensa por ascenso de nivel en estado PENDING
+			if (this.levelRewardRepo) {
+				const existingReward = await this.levelRewardRepo.findByPlayerAndLevel(
+					playerId,
+					targetLevel.id,
+				);
+				if (!existingReward) {
+					await this.levelRewardRepo
+						.createReward({
+							playerId,
+							levelId: targetLevel.id,
+							coinsAmount: targetLevel.coins ?? 0,
+							roomId: targetLevel.roomId,
+						})
+						.catch(() => undefined);
+				}
+			}
+		}
+
+		await this.playerModel.save(player);
+		const updatedPlayer = await this.findByUnique({ id: playerId });
+
+		if (!updatedPlayer) throw new Error(`Error al recargar player ${playerId}`);
+		return {
+			player: updatedPlayer,
+			upgradedLevel,
+			newLevelId,
+		};
 	}
 
 	async findByUnique(options: PlayerUniqueFields): Promise<PlayerWithoutAudit | null> {
@@ -187,6 +282,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 				experience: true,
 				id: true,
 				levelId: true,
+				roomId: true,
 				level: {
 					image: true,
 					name: true,
@@ -196,6 +292,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			},
 			relations: {
 				level: true,
+				room: true,
 			},
 		});
 
@@ -215,6 +312,15 @@ export class PlayerRepoService implements ForDatabasePlayers {
 							}
 						: null,
 					levelId: result.levelId ?? null,
+					roomId: result.roomId ?? null,
+					room: result.room
+						? {
+								id: result.room.id,
+								name: result.room.name,
+								bonus: String(result.room.bonus),
+								isActive: result.room.isActive,
+							}
+						: null,
 				}
 			: null;
 	}

@@ -1,9 +1,11 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { LevelRewardsModule } from '../levelRewards/levelRewards.module';
 import { LevelsModule } from '../levels/levels.module';
 import { FOR_PANEL_API_CORE } from '../panelApi/constants';
 import type { ForPanelApiCore } from '../panelApi/ports/forPanelApiCore.port';
+import { RoomsModule } from '../rooms/rooms.module';
 import { PlayerRepoService } from './adapters/driven/PlayerRepo.service';
 import { PlayersController } from './adapters/driver/players.controller';
 import { PLAYER_CORE_PROVIDER } from './app/constants';
@@ -12,7 +14,12 @@ import { PlayersCore } from './app/playersCore';
 import { ForDatabasePlayers } from './ports/driver/ForDatabasePlayers';
 
 @Module({
-	imports: [TypeOrmModule.forFeature([Player]), forwardRef(() => LevelsModule)],
+	imports: [
+		TypeOrmModule.forFeature([Player]),
+		forwardRef(() => LevelsModule),
+		forwardRef(() => RoomsModule),
+		forwardRef(() => LevelRewardsModule),
+	],
 	controllers: [PlayersController],
 	providers: [
 		PlayerRepoService,
