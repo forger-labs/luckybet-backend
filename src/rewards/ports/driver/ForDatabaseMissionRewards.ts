@@ -5,6 +5,7 @@ export type CreateMissionRewardInput = {
 	userMissionId: number;
 	playerId: number;
 	coinsAmount: number;
+	roomId?: number | null;
 	experiencePoints: number;
 };
 
@@ -17,7 +18,10 @@ export interface ForDatabaseMissionRewards {
 
 	findPendingByPlayer(playerId: number): Promise<MissionRewardBasic[]>;
 
-	findUncertainRewards(params?: { take?: number; skip?: number }): Promise<[MissionRewardBasic[], number]>;
+	findUncertainRewards(params?: {
+		take?: number;
+		skip?: number;
+	}): Promise<[MissionRewardBasic[], number]>;
 
 	acquireProcessingLock(
 		userMissionId: number,

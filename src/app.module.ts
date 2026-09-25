@@ -13,6 +13,7 @@ import { PanelModule } from './panelApi/panel.module';
 import { PlayerChestsModule } from './playerChests/playerChests.module';
 import { PlayersModule } from './players/players.module';
 import { RewardsModule } from './rewards/rewards.module';
+import { RoomsModule } from './rooms/rooms.module';
 import { CacheModule } from './shared/cache/cache.module';
 import { buildTypeOrmOptionsFromConfig } from './shared/database/databaseOptions';
 import { RequestLoggerInterceptor } from './shared/interceptors/requestLogger.interceptor';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
 		StorageModule,
 		CacheModule,
 		PanelModule,
+		RoomsModule,
 		PlayersModule,
 		MisionesModule,
 		RewardsModule,

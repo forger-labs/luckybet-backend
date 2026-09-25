@@ -29,6 +29,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			userMissionId: data.userMissionId,
 			playerId: data.playerId,
 			coinsAmount: data.coinsAmount,
+			roomId: data.roomId,
 			experiencePoints: data.experiencePoints,
 			status: RewardStatus.PENDING,
 		});
@@ -129,12 +130,13 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			userMissionId: reward.userMissionId,
 			playerId: reward.playerId,
 			coinsAmount: reward.coinsAmount,
+			roomId: reward.roomId,
 			experiencePoints: reward.experiencePoints,
 			status: reward.status,
 			externalOperationId: reward.externalOperationId,
 			errorMessage: reward.errorMessage,
 			resolvedByAdminId: reward.resolvedByAdminId,
-			claimedAt: reward.claimedAt,
+			claimedAt: reward.claimedAt ? reward.claimedAt.toISOString() : null,
 			missionTitle: reward.userMission?.mission?.title,
 		};
 	}

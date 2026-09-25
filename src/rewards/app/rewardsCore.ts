@@ -10,6 +10,10 @@ import {
 
 import { FOR_PANEL_API_CORE } from '../../panelApi/constants';
 import type { ForPanelApiCore } from '../../panelApi/ports/forPanelApiCore.port';
+import { PlayerRepoService } from '../../players/adapters/driven/PlayerRepo.service';
+import type { ForDatabasePlayers } from '../../players/ports/driver/ForDatabasePlayers';
+import { FOR_DATABASE_ROOMS } from '../../rooms/app/constants';
+import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
 import type { ForManageRewards } from '../ports/driven/ForManageRewards';
 import type { ForDatabaseMissionRewards } from '../ports/driver/ForDatabaseMissionRewards';
 import { FOR_DATABASE_MISSION_REWARDS } from './constants';
@@ -25,15 +29,20 @@ export class RewardsCore implements ForManageRewards {
     private readonly rewardRepo: ForDatabaseMissionRewards,
     @Inject(FOR_PANEL_API_CORE)
     private readonly panelApi: ForPanelApiCore,
+    @Inject(PlayerRepoService)
+    private readonly playerRepo: ForDatabasePlayers,
+    @Inject(FOR_DATABASE_ROOMS)
+    private readonly roomRepo: ForDatabaseRooms,
   ) {}
 
-  createReward(data: {
+  async createReward(data: {
     userMissionId: number;
     playerId: number;
     coinsAmount: number;
+    roomId?: number | null;
     experiencePoints: number;
   }): Promise<MissionRewardBasic> {
-    return this.rewardRepo.createReward(data);
+    return await this.rewardRepo.createReward(data);
   }
 
   async claimReward(
@@ -61,6 +70,17 @@ export class RewardsCore implements ForManageRewards {
       );
     }
 
+    // Obtener jugador y su sala base
+    const player = await this.playerRepo.findByUnique({ id: playerId });
+
+    if (!player) {
+      throw new BadRequestException(
+        'Este jugador no existe en nuestra base de datos',
+      );
+    }
+    const playerIdentifier = player.username;
+    const baseRoom = player.room;
+
     // Adquirir bloqueo atómico en PostgreSQL cambiando a PROCESSING
     const locked = await this.rewardRepo.acquireProcessingLock(userMissionId, [
       RewardStatus.PENDING,
@@ -78,36 +98,51 @@ export class RewardsCore implements ForManageRewards {
       });
     }
 
-    // Ejecutar llamada hacia el panel externo de LuckyBet
+    let transferredToTarget = false;
+
+    // 1. Si la recompensa tiene una sala especial asignada, transferir al jugador
+    if (locked.roomId && this.roomRepo) {
+      const targetRoom = await this.roomRepo.findById(locked.roomId);
+      if (targetRoom?.isActive) {
+        const success = await this.panelApi
+          .changePlayerSenior(playerIdentifier, targetRoom.name)
+          .catch((err) => {
+            this.logger.error(
+              `Error al transferir jugador a sala [${targetRoom.name}]:`,
+              err,
+            );
+            return false;
+          });
+
+        // Si la transferencia a la sala promocional falla, abortar crédito y marcar TIMEOUT_UNCERTAIN
+        if (!success) {
+          return await this.rewardRepo.updateStatus(
+            locked.id,
+            RewardStatus.TIMEOUT_UNCERTAIN,
+            {
+              errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar`,
+            },
+          );
+        }
+        transferredToTarget = true;
+      }
+    }
+
+    // 2. Ejecutar acreditación de saldo en LuckyBet
+    let mutationResult: {
+      success: boolean;
+      operationId?: string | null;
+      errorMessage?: string;
+    } | null = null;
     try {
-      const mutation = await this.panelApi.creditPlayer(
-        playerId,
+      mutationResult = await this.panelApi.creditPlayer(
+        playerIdentifier,
         locked.coinsAmount,
       );
-      if (mutation.success) {
-        return await this.rewardRepo.updateStatus(
-          locked.id,
-          RewardStatus.CLAIMED,
-          {
-            externalOperationId: mutation.operationId ?? null,
-            claimedAt: new Date(),
-          },
-        );
-      }
-
-      this.logger.error(
-        `Error en panel LuckyBet al acreditar fichas: ${mutation.errorMessage}`,
-      );
-      return await this.rewardRepo.updateStatus(
-        locked.id,
-        RewardStatus.PENDING,
-        {
-          errorMessage: mutation.errorMessage ?? 'Error al acreditar saldo',
-        },
-      );
     } catch (error) {
+      // Timeout o error de red en la carga
       this.logger.error(
-        `Fallo de conexion o timeout con LuckyBet para reward ${locked.id}:`,
+        `Timeout/Error al acreditar saldo en LuckyBet para reward ${locked.id}:`,
         error,
       );
       return await this.rewardRepo.updateStatus(
@@ -117,14 +152,65 @@ export class RewardsCore implements ForManageRewards {
           errorMessage:
             error instanceof Error
               ? error.message
-              : 'Error desconocido de conexion',
+              : 'Error desconocido de conexion al acreditar',
         },
       );
     }
+
+    if (!mutationResult.success) {
+      this.logger.error(
+        `Error reportado por LuckyBet al acreditar fichas: ${mutationResult.errorMessage}`,
+      );
+      // Regresar al jugador a su sala si fue movido
+      if (transferredToTarget && baseRoom) {
+        await this.panelApi
+          .changePlayerSenior(playerIdentifier, baseRoom.name)
+          .catch(() => undefined);
+      }
+      return await this.rewardRepo.updateStatus(
+        locked.id,
+        RewardStatus.PENDING,
+        {
+          errorMessage:
+            mutationResult.errorMessage ?? 'Error al acreditar saldo',
+        },
+      );
+    }
+
+    // 3. Retorno obligatorio a la sala base del jugador si fue transferido
+    if (transferredToTarget && baseRoom) {
+      const returned = await this.panelApi
+        .changePlayerSenior(playerIdentifier, baseRoom.name)
+        .catch((err) => {
+          this.logger.error(
+            `Error al regresar al jugador a su sala base [${baseRoom.name}]:`,
+            err,
+          );
+          return false;
+        });
+
+      // Si el saldo ya entró pero falló el retorno a la sala base, marcar TIMEOUT_UNCERTAIN para auditoría
+      if (!returned) {
+        return await this.rewardRepo.updateStatus(
+          locked.id,
+          RewardStatus.TIMEOUT_UNCERTAIN,
+          {
+            externalOperationId: mutationResult.operationId ?? null,
+            errorMessage: `Fichas acreditadas (Op: ${mutationResult.operationId}) pero fallo el retorno a la sala base [${baseRoom.name}]`,
+            claimedAt: new Date(),
+          },
+        );
+      }
+    }
+
+    return await this.rewardRepo.updateStatus(locked.id, RewardStatus.CLAIMED, {
+      externalOperationId: mutationResult.operationId ?? null,
+      claimedAt: new Date(),
+    });
   }
 
-  getPendingRewards(playerId: number): Promise<MissionRewardBasic[]> {
-    return this.rewardRepo.findPendingByPlayer(playerId);
+  async getPendingRewards(playerId: number): Promise<MissionRewardBasic[]> {
+    return await this.rewardRepo.findPendingByPlayer(playerId);
   }
 
   async getUncertainRewards(params?: {
@@ -162,7 +248,20 @@ export class RewardsCore implements ForManageRewards {
       );
     }
 
+    const player = this.playerRepo
+      ? await this.playerRepo.findByUnique({ id: reward.playerId })
+      : null;
+    const playerIdentifier = player?.username || String(reward.playerId);
+    const baseRoom = player?.room;
+
     if (action === 'RESOLVE_CLAIMED') {
+      // Si el saldo ya entró y solo faltaba devolver al jugador a su sala
+      if (baseRoom) {
+        await this.panelApi
+          .changePlayerSenior(playerIdentifier, baseRoom.name)
+          .catch(() => undefined);
+      }
+
       return this.rewardRepo.updateStatus(reward.id, RewardStatus.CLAIMED, {
         externalOperationId:
           options?.externalOperationId ?? reward.externalOperationId,
@@ -174,13 +273,29 @@ export class RewardsCore implements ForManageRewards {
       });
     }
 
-    // FORCE_RETRY: Forzar la ejecución hacia LuckyBet
+    // FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
+    if (reward.roomId && this.roomRepo) {
+      const targetRoom = await this.roomRepo.findById(reward.roomId);
+      if (targetRoom?.isActive) {
+        await this.panelApi
+          .changePlayerSenior(playerIdentifier, targetRoom.name)
+          .catch(() => undefined);
+      }
+    }
+
     try {
       const mutation = await this.panelApi.creditPlayer(
-        reward.playerId,
+        playerIdentifier,
         reward.coinsAmount,
       );
       if (mutation.success) {
+        // Retornar al jugador a su sala base
+        if (baseRoom) {
+          await this.panelApi
+            .changePlayerSenior(playerIdentifier, baseRoom.name)
+            .catch(() => undefined);
+        }
+
         return await this.rewardRepo.updateStatus(
           reward.id,
           RewardStatus.CLAIMED,

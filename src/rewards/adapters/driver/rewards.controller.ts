@@ -11,12 +11,7 @@ import {
 	Query,
 	UseGuards,
 } from '@nestjs/common';
-import {
-	ApiCookieAuth,
-	ApiHeader,
-	ApiOkResponse,
-	ApiQuery,
-} from '@nestjs/swagger';
+import { ApiCookieAuth, ApiHeader, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 
 import { JwtGuard } from '../../../auth/app/guards/jwt.guard';
 import { RolesGuard } from '../../../auth/app/guards/roles.guard';
