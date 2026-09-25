@@ -1,9 +1,4 @@
-import {
-	ConflictException,
-	Inject,
-	Injectable,
-	NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import type { ForManageRooms } from '../ports/driven/ForManageRooms';
 import type { ForDatabaseRooms } from '../ports/driver/ForDatabaseRooms';

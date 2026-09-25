@@ -17,10 +17,7 @@ export interface ForManageLevelRewards {
 		skip: number;
 	}>;
 
-	getUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<{
+	getUncertainClaims(params?: { take?: number; skip?: number }): Promise<{
 		claims: LevelRewardBasic[];
 		total: number;
 		limit: number;

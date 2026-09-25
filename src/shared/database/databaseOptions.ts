@@ -13,12 +13,15 @@ export type DatabaseEnv = {
 	DB_USERNAME?: string;
 	DB_PASSWORD?: string;
 	DB_DATABASE?: string;
+	DB_URL?: string;
 };
 
 export type PostgresConnectionConfig = Pick<
 	PostgresDataSourceOptions,
 	'type' | 'host' | 'port' | 'username' | 'password' | 'database'
 >;
+
+export type PostgressConnUrlConfig = Pick<PostgresDataSourceOptions, 'type' | 'url'>;
 
 function parsePort(port: string | number | undefined, fallback: number): number {
 	if (port === undefined || port === '') {
@@ -39,13 +42,21 @@ function readDatabaseEnv(env?: DatabaseEnv): DatabaseEnv {
 		DB_USERNAME: process.env.DB_USERNAME,
 		DB_PASSWORD: process.env.DB_PASSWORD,
 		DB_DATABASE: process.env.DB_DATABASE,
+		DB_URL: process.env.DB_DIRECT_URL ?? process.env.DB_URL,
 	};
 }
 
 export function buildTypeOrmConnectionOptions(
 	env?: DatabaseEnv,
-): PostgresConnectionConfig {
+): PostgresConnectionConfig | PostgressConnUrlConfig {
 	const source = readDatabaseEnv(env);
+
+	if (source.DB_URL) {
+		return {
+			type: 'postgres',
+			url: source.DB_URL,
+		};
+	}
 
 	return {
 		type: 'postgres',
@@ -65,6 +76,7 @@ export function buildTypeOrmOptionsFromConfig(config: ConfigService) {
 			DB_USERNAME: config.get<string>('DB_USERNAME'),
 			DB_PASSWORD: config.get<string>('DB_PASSWORD'),
 			DB_DATABASE: config.get<string>('DB_DATABASE'),
+			DB_URL: config.get<string>('DB_URL'),
 		}),
 		autoLoadEntities: true,
 		synchronize: false,

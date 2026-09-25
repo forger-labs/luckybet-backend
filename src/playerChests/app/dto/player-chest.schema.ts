@@ -79,12 +79,12 @@ export const playerChestFilterSchema = z.object({
 		.describe('Filtrar por periodo (ej: 2026-W39, 2026-09)'),
 	orderBy: z
 		.enum(PlayerChestSortField)
-    .default(PlayerChestSortField.CREATED_AT)
+		.default(PlayerChestSortField.CREATED_AT)
 		.optional()
 		.describe('Campo por el cual ordenar'),
 	orderDirection: z
 		.enum(SortOrder)
-    .default(SortOrder.DESC)
+		.default(SortOrder.DESC)
 		.optional()
 		.describe('Dirección del ordenamiento (ASC o DESC)'),
 	take: z.coerce

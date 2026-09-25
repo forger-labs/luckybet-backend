@@ -55,8 +55,7 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 		}
 
 		// Validar que el jugador efectivamente haya alcanzado este nivel
-		const player = await this.playerRepo.findByUnique({ id: playerId })
-			;
+		const player = await this.playerRepo.findByUnique({ id: playerId });
 		if (!player) {
 			throw new NotFoundException(`Jugador con ID ${playerId} no encontrado`);
 		}
@@ -152,18 +151,20 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 			this.logger.error(
 				`Timeout/Fallo de red en LuckyBet para level reward claim ${locked.id}:`,
 				error,
-      );
+			);
 
-      if (transferredToTarget && baseRoom) {
+			if (transferredToTarget && baseRoom) {
 				await this.panelApi
 					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch((err) => this.logger.error(
-						`Error al regresar al jugador a su sala base [${baseRoom.name}] tras nivel:`,
-						err,
-					));
+					.catch(err =>
+						this.logger.error(
+							`Error al regresar al jugador a su sala base [${baseRoom.name}] tras nivel:`,
+							err,
+						),
+					);
 			}
 
-      return await this.rewardRepo.updateStatus(
+			return await this.rewardRepo.updateStatus(
 				locked.id,
 				RewardStatus.TIMEOUT_UNCERTAIN,
 				{

@@ -11,9 +11,9 @@
  *   node scripts/test-luckybet-credit.js --action=debit --user=serrot99 --amount=10
  */
 
-const https = require('https');
-const fs = require('fs');
-const { URLSearchParams } = require('url');
+const https = require('node:https');
+const fs = require('node:fs');
+const { URLSearchParams } = require('node:url');
 
 // Cargar credenciales desde .env
 let adminLogin = 'Tigreee4';
@@ -77,7 +77,6 @@ function request(options, body) {
 }
 
 async function login() {
-	console.log(`\n[1/3] Autenticando admin (${adminLogin}) en https://${panelHost}...`);
 	const loginBody = new URLSearchParams({
 		login: adminLogin,
 		password: adminPassword,
@@ -106,8 +105,6 @@ async function login() {
 	if (!sessionId) {
 		throw new Error(`Fallo de login. Headers devueltos: ${JSON.stringify(res.headers)}`);
 	}
-
-	console.log(`✔ Sesión iniciada. PHPSESSID: ${sessionId}`);
 	return sessionId;
 }
 
@@ -115,10 +112,6 @@ async function resolveUserId(sessionId, username) {
 	if (/^\d+$/.test(String(username).trim())) {
 		return String(username).trim();
 	}
-
-	console.log(
-		`\n[2/3] Buscando ID numérico de LuckyBet para el usuario '${username}'...`,
-	);
 	const searchBody = new URLSearchParams({
 		search_login: username,
 		page: '1',
@@ -147,14 +140,10 @@ async function resolveUserId(sessionId, username) {
 	if (!userId) {
 		throw new Error(`No se encontró el usuario '${username}' en LuckyBet.`);
 	}
-
-	console.log(`✔ Usuario resuelto: '${username}' -> LuckyBet ID: ${userId}`);
 	return userId;
 }
 
 async function executeAction(sessionId, userId, args) {
-	console.log(`\n[3/3] Ejecutando acción '${args.action}' para ID: ${userId}...`);
-
 	if (args.action === 'balance') {
 		const params = new URLSearchParams({
 			act: 'admin',
@@ -164,20 +153,17 @@ async function executeAction(sessionId, userId, args) {
 			limit: '5',
 		}).toString();
 
-		const res = await request({
+		const _res = await request({
 			hostname: panelHost,
 			path: `/index.php?${params}`,
 			method: 'GET',
 			headers: { Cookie: `PHPSESSID=${sessionId}` },
 		});
-
-		console.log('\n=== RESPUESTA DE BALANCE ===');
-		console.log(JSON.stringify(JSON.parse(res.data), null, 2));
 		return;
 	}
 
 	const isCredit = args.action === 'credit';
-	const url = `${panelHost ? `https://${panelHost}` : ''}/index.php?act=admin&area=balance&response=js&type=frame&printing=true&id=${userId}`;
+	const _url = `${panelHost ? `https://${panelHost}` : ''}/index.php?act=admin&area=balance&response=js&type=frame&printing=true&id=${userId}`;
 	const path = `/index.php?act=admin&area=balance&response=js&type=frame&printing=true&id=${userId}`;
 
 	const params = new URLSearchParams();
@@ -200,8 +186,6 @@ async function executeAction(sessionId, userId, args) {
 		}
 	}
 
-	console.log('Payload enviado a LuckyBet:', params.toString());
-
 	const res = await request(
 		{
 			hostname: panelHost,
@@ -215,30 +199,24 @@ async function executeAction(sessionId, userId, args) {
 		},
 		params.toString(),
 	);
-
-	console.log('\n=== RESPUESTA RAW DE MUTACIÓN ===');
 	try {
 		const parsed = JSON.parse(res.data);
-		console.log(JSON.stringify(parsed, null, 2));
 		if (parsed.printUrl) {
-			const match = parsed.printUrl.match(/operation=([0-9a-zA-Z_-]+)/);
-			console.log(`\n✔ Operation ID extraído: ${match ? match[1] : 'No encontrado'}`);
+			const _match = parsed.printUrl.match(/operation=([0-9a-zA-Z_-]+)/);
 		}
-	} catch (e) {
-		console.log(res.data);
+  } catch {
+    // a
 	}
 }
 
 async function main() {
 	const args = parseArgs();
-	console.log('Parámetros de ejecución:', args);
 
 	try {
 		const sessionId = await login();
 		const userId = await resolveUserId(sessionId, args.user);
 		await executeAction(sessionId, userId, args);
-	} catch (error) {
-		console.error('\n❌ ERROR:', error.message || error);
+	} catch {
 		process.exit(1);
 	}
 }

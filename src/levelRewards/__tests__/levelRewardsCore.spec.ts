@@ -57,17 +57,17 @@ describe('LevelRewardsCore', () => {
 			getLevels: jest.fn(),
 			updateLevel: jest.fn(),
 			getLowestLevel: jest.fn(),
-    };
+		};
 
 		mockPanelApi = {
 			authenticatePlayer: jest.fn(),
 			syncOrRegisterPlayer: jest.fn(),
 			getLastPlayedGames: jest.fn(),
 			getLastPlayedGame: jest.fn(),
-      debitPlayer: jest.fn(),
-      hashToken: jest.fn(),
-      invalidatePlayerSession: jest.fn(),
-      creditPlayer: jest.fn(),
+			debitPlayer: jest.fn(),
+			hashToken: jest.fn(),
+			invalidatePlayerSession: jest.fn(),
+			creditPlayer: jest.fn(),
 			changePlayerSenior: jest.fn(),
 		};
 
