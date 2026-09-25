@@ -1,0 +1,128 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class CoreSchema1790308726466 implements MigrationInterface {
+    name = 'CoreSchema1790308726466'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`CREATE TYPE "public"."bonus_rooms_bonus_enum" AS ENUM('0', '30', '40', '50', '100', '150', '200')`);
+        await queryRunner.query(`CREATE TABLE "bonus_rooms" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "name" character varying(100) NOT NULL, "bonus" "public"."bonus_rooms_bonus_enum" NOT NULL DEFAULT '0', "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "UQ_b5e5496e9c45e6aeb26a2437ce1" UNIQUE ("name"), CONSTRAINT "PK_4a9fde364ed52253f3fd53497c9" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_a154cf9e46bc2b69be263532bd" ON "bonus_rooms"  ("bonus", "is_active") `);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_b5e5496e9c45e6aeb26a2437ce" ON "bonus_rooms"  ("name") `);
+        await queryRunner.query(`CREATE TYPE "public"."mission_chests_period_type_enum" AS ENUM('WEEKLY', 'MONTHLY')`);
+        await queryRunner.query(`CREATE TABLE "mission_chests" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "title" character varying(200) NOT NULL, "description" text, "period_type" "public"."mission_chests_period_type_enum" NOT NULL DEFAULT 'WEEKLY', "required_missions" integer NOT NULL DEFAULT '5', "coins_amount" integer NOT NULL DEFAULT '0', "room_id" integer, "experience_points" integer NOT NULL DEFAULT '0', "image_url" character varying(500), "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "PK_f3e46700fd7cee6b79a86425f97" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_034d2c1a78d99f5fcd65e5a9cb" ON "mission_chests"  ("period_type", "is_active") `);
+        await queryRunner.query(`CREATE TYPE "public"."admin_users_role_enum" AS ENUM('SUPER_ADMIN', 'REVIEWER')`);
+        await queryRunner.query(`CREATE TABLE "admin_users" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "username" character varying NOT NULL, "password" character varying NOT NULL, "role" "public"."admin_users_role_enum" NOT NULL, "is_active" boolean NOT NULL DEFAULT true, CONSTRAINT "UQ_2873882c38e8c07d98cb64f962d" UNIQUE ("username"), CONSTRAINT "PK_06744d221bb6145dc61e5dc441d" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "players" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "username" character varying(100) NOT NULL, "phone" character varying(20), "is_active" boolean NOT NULL DEFAULT true, "created_by" integer, "updated_by" integer, "level_id" integer, "experience" integer NOT NULL DEFAULT '0', "room_id" integer, CONSTRAINT "UQ_0ba988c87a279b5067d273c5924" UNIQUE ("username"), CONSTRAINT "PK_de22b8fdeee0c33ab55ae71da3b" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "levels" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "name" character varying(100) NOT NULL, "image" character varying(500) NOT NULL, "min_experience" integer NOT NULL, "coins" integer NOT NULL, "room_id" integer, CONSTRAINT "PK_05f8dd8f715793c64d49e3f1901" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TYPE "public"."level_rewards_status_enum" AS ENUM('PENDING', 'PROCESSING', 'CLAIMED', 'TIMEOUT_UNCERTAIN')`);
+        await queryRunner.query(`CREATE TABLE "level_rewards" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "player_id" integer NOT NULL, "level_id" integer NOT NULL, "coins_amount" integer NOT NULL DEFAULT '0', "room_id" integer, "status" "public"."level_rewards_status_enum" NOT NULL DEFAULT 'PENDING', "external_operation_id" character varying(150), "error_message" text, "resolved_by_admin_id" integer, "claimed_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "UQ_level_rewards_player_level" UNIQUE ("player_id", "level_id"), CONSTRAINT "PK_73d2cce6446b362a22c142db767" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_a0a4a09e16877933230fbf55df" ON "level_rewards"  ("player_id") `);
+        await queryRunner.query(`CREATE INDEX "IDX_d9e5b5f1f07423d2c0433053f1" ON "level_rewards"  ("level_id") `);
+        await queryRunner.query(`CREATE INDEX "IDX_bee71af41a9fcec5fb9e2ad750" ON "level_rewards"  ("status") `);
+        await queryRunner.query(`CREATE TYPE "public"."missions_type_enum" AS ENUM('DAILY', 'WEEKLY', 'FIXED')`);
+        await queryRunner.query(`CREATE TYPE "public"."missions_status_enum" AS ENUM('INACTIVE', 'ACTIVE', 'COMPLETED', 'CANCELLED')`);
+        await queryRunner.query(`CREATE TABLE "missions" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "title" character varying(200) NOT NULL, "description" text, "type" "public"."missions_type_enum" NOT NULL, "status" "public"."missions_status_enum" NOT NULL DEFAULT 'INACTIVE', "coins_amount" integer NOT NULL, "experience_points" integer NOT NULL, "room_id" integer, "image_url" character varying(500), "activated_at" TIMESTAMP, "expires_at" TIMESTAMP, "created_by" integer, "updated_by" integer, CONSTRAINT "PK_787aebb1ac5923c9904043c6309" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TYPE "public"."mission_steps_type_enum" AS ENUM('IMAGE', 'TEXT', 'GAME_PLAY')`);
+        await queryRunner.query(`CREATE TABLE "mission_steps" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "mission_id" integer NOT NULL, "step_order" integer NOT NULL, "type" "public"."mission_steps_type_enum" NOT NULL, "content" text, "target_config" jsonb, CONSTRAINT "PK_4aaf0ff3de31918f1a10ca6bd93" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_bdc56231232e1ec51b3a3f7363" ON "mission_steps"  ("mission_id", "step_order") `);
+        await queryRunner.query(`CREATE TYPE "public"."user_missions_status_enum" AS ENUM('IN_PROGRESS', 'COMPLETED', 'EXPIRED', 'CANCELLED')`);
+        await queryRunner.query(`CREATE TABLE "user_missions" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "player_id" integer NOT NULL, "mission_id" integer NOT NULL, "status" "public"."user_missions_status_enum" NOT NULL DEFAULT 'IN_PROGRESS', "current_step" integer NOT NULL DEFAULT '1', "started_at" TIMESTAMP NOT NULL DEFAULT NOW(), "completed_at" TIMESTAMP, CONSTRAINT "PK_252d92542f9926e799c0161ac46" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TYPE "public"."user_mission_steps_status_enum" AS ENUM('PENDING', 'APPROVED', 'REJECTED')`);
+        await queryRunner.query(`CREATE TABLE "user_mission_steps" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "user_mission_id" integer NOT NULL, "mission_step_id" integer NOT NULL, "status" "public"."user_mission_steps_status_enum" NOT NULL DEFAULT 'PENDING', "submission_text" text, "submission_image_url" character varying(500), "reviewed_by" integer, "reviewed_at" TIMESTAMP, "reviewer_notes" text, CONSTRAINT "PK_5149d664bd78232376a5430394c" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_82fae97c45fe22fe31c6f95d31" ON "user_mission_steps"  ("user_mission_id", "mission_step_id") `);
+        await queryRunner.query(`CREATE TYPE "public"."user_mission_chests_status_enum" AS ENUM('PENDING', 'PROCESSING', 'CLAIMED', 'TIMEOUT_UNCERTAIN')`);
+        await queryRunner.query(`CREATE TABLE "user_mission_chests" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "player_id" integer NOT NULL, "chest_id" integer NOT NULL, "period_key" character varying(50) NOT NULL, "completed_missions_count" integer NOT NULL DEFAULT '0', "coins_amount" integer NOT NULL DEFAULT '0', "room_id" integer, "status" "public"."user_mission_chests_status_enum" NOT NULL DEFAULT 'PENDING', "external_operation_id" character varying(100), "error_message" text, "resolved_by_admin_id" integer, "claimed_at" TIMESTAMP, CONSTRAINT "PK_d2d67bb42358c68b9971c607ef7" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_75271d9112fcfaf20de0106ec6" ON "user_mission_chests"  ("player_id", "chest_id", "period_key") `);
+        await queryRunner.query(`CREATE TYPE "public"."mission_rewards_status_enum" AS ENUM('PENDING', 'PROCESSING', 'CLAIMED', 'TIMEOUT_UNCERTAIN')`);
+        await queryRunner.query(`CREATE TABLE "mission_rewards" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "user_mission_id" integer NOT NULL, "player_id" integer NOT NULL, "coins_amount" integer NOT NULL DEFAULT '0', "room_id" integer, "experience_points" integer NOT NULL DEFAULT '0', "status" "public"."mission_rewards_status_enum" NOT NULL DEFAULT 'PENDING', "external_operation_id" character varying(100), "error_message" text, "resolved_by_admin_id" integer, "claimed_at" TIMESTAMP, CONSTRAINT "UQ_926142e94dc3b2ff712b2f4fe19" UNIQUE ("user_mission_id"), CONSTRAINT "REL_926142e94dc3b2ff712b2f4fe1" UNIQUE ("user_mission_id"), CONSTRAINT "PK_2c4dcc1c7a7a3c6ed95a3a65def" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_7e77b6f37243bfb79fb6823d79" ON "mission_rewards"  ("player_id", "status") `);
+        await queryRunner.query(`ALTER TABLE "mission_chests" ADD CONSTRAINT "FK_051b5892eb94e4268a5943fe3c6" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "players" ADD CONSTRAINT "FK_99b646f718dd89ef6e27e5d89f5" FOREIGN KEY ("created_by") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "players" ADD CONSTRAINT "FK_9668b931501a0bbdb2842d5c7d5" FOREIGN KEY ("updated_by") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "players" ADD CONSTRAINT "FK_f7a2eabf8f2f018cf9f82364f03" FOREIGN KEY ("level_id") REFERENCES "levels"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "players" ADD CONSTRAINT "FK_42530bbf46c4b64a5921dbc2047" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "levels" ADD CONSTRAINT "FK_f19a21470ac8919bef8a01fe9b2" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" ADD CONSTRAINT "FK_a0a4a09e16877933230fbf55dff" FOREIGN KEY ("player_id") REFERENCES "players"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" ADD CONSTRAINT "FK_d9e5b5f1f07423d2c0433053f1c" FOREIGN KEY ("level_id") REFERENCES "levels"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" ADD CONSTRAINT "FK_18f04e9451f4dd5215a636f9808" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" ADD CONSTRAINT "FK_6255f94308085eb8150c8adff3e" FOREIGN KEY ("resolved_by_admin_id") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "missions" ADD CONSTRAINT "FK_1872998c9789f58e08fd31a6229" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "missions" ADD CONSTRAINT "FK_646a538da0408b13f96def7e814" FOREIGN KEY ("created_by") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "missions" ADD CONSTRAINT "FK_6c51c42626850e6f11e7a449c95" FOREIGN KEY ("updated_by") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "mission_steps" ADD CONSTRAINT "FK_af84531836b9b870505615c852d" FOREIGN KEY ("mission_id") REFERENCES "missions"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_missions" ADD CONSTRAINT "FK_3be9f8da02f117c437f7c9ae420" FOREIGN KEY ("player_id") REFERENCES "players"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_missions" ADD CONSTRAINT "FK_49c3f14415ed531190d7266f860" FOREIGN KEY ("mission_id") REFERENCES "missions"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" ADD CONSTRAINT "FK_2780812f15be2f50734129b46d2" FOREIGN KEY ("user_mission_id") REFERENCES "user_missions"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" ADD CONSTRAINT "FK_72950f9a82850f9b082bc9c4461" FOREIGN KEY ("mission_step_id") REFERENCES "mission_steps"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" ADD CONSTRAINT "FK_8edd0b706773dbac0103c2eadc7" FOREIGN KEY ("reviewed_by") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" ADD CONSTRAINT "FK_a53dbcaa81253c1d3768aac18a3" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" ADD CONSTRAINT "FK_54567b85b81256f859784f18c22" FOREIGN KEY ("chest_id") REFERENCES "mission_chests"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" ADD CONSTRAINT "FK_a3e77110b7f7d215ff28e452e0b" FOREIGN KEY ("resolved_by_admin_id") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "mission_rewards" ADD CONSTRAINT "FK_9f156e9620446ef71aed714f023" FOREIGN KEY ("room_id") REFERENCES "bonus_rooms"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "mission_rewards" ADD CONSTRAINT "FK_926142e94dc3b2ff712b2f4fe19" FOREIGN KEY ("user_mission_id") REFERENCES "user_missions"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "mission_rewards" ADD CONSTRAINT "FK_a219a5602a7c533b608ae070b31" FOREIGN KEY ("resolved_by_admin_id") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "mission_rewards" DROP CONSTRAINT "FK_a219a5602a7c533b608ae070b31"`);
+        await queryRunner.query(`ALTER TABLE "mission_rewards" DROP CONSTRAINT "FK_926142e94dc3b2ff712b2f4fe19"`);
+        await queryRunner.query(`ALTER TABLE "mission_rewards" DROP CONSTRAINT "FK_9f156e9620446ef71aed714f023"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" DROP CONSTRAINT "FK_a3e77110b7f7d215ff28e452e0b"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" DROP CONSTRAINT "FK_54567b85b81256f859784f18c22"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_chests" DROP CONSTRAINT "FK_a53dbcaa81253c1d3768aac18a3"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" DROP CONSTRAINT "FK_8edd0b706773dbac0103c2eadc7"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" DROP CONSTRAINT "FK_72950f9a82850f9b082bc9c4461"`);
+        await queryRunner.query(`ALTER TABLE "user_mission_steps" DROP CONSTRAINT "FK_2780812f15be2f50734129b46d2"`);
+        await queryRunner.query(`ALTER TABLE "user_missions" DROP CONSTRAINT "FK_49c3f14415ed531190d7266f860"`);
+        await queryRunner.query(`ALTER TABLE "user_missions" DROP CONSTRAINT "FK_3be9f8da02f117c437f7c9ae420"`);
+        await queryRunner.query(`ALTER TABLE "mission_steps" DROP CONSTRAINT "FK_af84531836b9b870505615c852d"`);
+        await queryRunner.query(`ALTER TABLE "missions" DROP CONSTRAINT "FK_6c51c42626850e6f11e7a449c95"`);
+        await queryRunner.query(`ALTER TABLE "missions" DROP CONSTRAINT "FK_646a538da0408b13f96def7e814"`);
+        await queryRunner.query(`ALTER TABLE "missions" DROP CONSTRAINT "FK_1872998c9789f58e08fd31a6229"`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" DROP CONSTRAINT "FK_6255f94308085eb8150c8adff3e"`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" DROP CONSTRAINT "FK_18f04e9451f4dd5215a636f9808"`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" DROP CONSTRAINT "FK_d9e5b5f1f07423d2c0433053f1c"`);
+        await queryRunner.query(`ALTER TABLE "level_rewards" DROP CONSTRAINT "FK_a0a4a09e16877933230fbf55dff"`);
+        await queryRunner.query(`ALTER TABLE "levels" DROP CONSTRAINT "FK_f19a21470ac8919bef8a01fe9b2"`);
+        await queryRunner.query(`ALTER TABLE "players" DROP CONSTRAINT "FK_42530bbf46c4b64a5921dbc2047"`);
+        await queryRunner.query(`ALTER TABLE "players" DROP CONSTRAINT "FK_f7a2eabf8f2f018cf9f82364f03"`);
+        await queryRunner.query(`ALTER TABLE "players" DROP CONSTRAINT "FK_9668b931501a0bbdb2842d5c7d5"`);
+        await queryRunner.query(`ALTER TABLE "players" DROP CONSTRAINT "FK_99b646f718dd89ef6e27e5d89f5"`);
+        await queryRunner.query(`ALTER TABLE "mission_chests" DROP CONSTRAINT "FK_051b5892eb94e4268a5943fe3c6"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_7e77b6f37243bfb79fb6823d79"`);
+        await queryRunner.query(`DROP TABLE "mission_rewards"`);
+        await queryRunner.query(`DROP TYPE "public"."mission_rewards_status_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_75271d9112fcfaf20de0106ec6"`);
+        await queryRunner.query(`DROP TABLE "user_mission_chests"`);
+        await queryRunner.query(`DROP TYPE "public"."user_mission_chests_status_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_82fae97c45fe22fe31c6f95d31"`);
+        await queryRunner.query(`DROP TABLE "user_mission_steps"`);
+        await queryRunner.query(`DROP TYPE "public"."user_mission_steps_status_enum"`);
+        await queryRunner.query(`DROP TABLE "user_missions"`);
+        await queryRunner.query(`DROP TYPE "public"."user_missions_status_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_bdc56231232e1ec51b3a3f7363"`);
+        await queryRunner.query(`DROP TABLE "mission_steps"`);
+        await queryRunner.query(`DROP TYPE "public"."mission_steps_type_enum"`);
+        await queryRunner.query(`DROP TABLE "missions"`);
+        await queryRunner.query(`DROP TYPE "public"."missions_status_enum"`);
+        await queryRunner.query(`DROP TYPE "public"."missions_type_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_bee71af41a9fcec5fb9e2ad750"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_d9e5b5f1f07423d2c0433053f1"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_a0a4a09e16877933230fbf55df"`);
+        await queryRunner.query(`DROP TABLE "level_rewards"`);
+        await queryRunner.query(`DROP TYPE "public"."level_rewards_status_enum"`);
+        await queryRunner.query(`DROP TABLE "levels"`);
+        await queryRunner.query(`DROP TABLE "players"`);
+        await queryRunner.query(`DROP TABLE "admin_users"`);
+        await queryRunner.query(`DROP TYPE "public"."admin_users_role_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_034d2c1a78d99f5fcd65e5a9cb"`);
+        await queryRunner.query(`DROP TABLE "mission_chests"`);
+        await queryRunner.query(`DROP TYPE "public"."mission_chests_period_type_enum"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_b5e5496e9c45e6aeb26a2437ce"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_a154cf9e46bc2b69be263532bd"`);
+        await queryRunner.query(`DROP TABLE "bonus_rooms"`);
+        await queryRunner.query(`DROP TYPE "public"."bonus_rooms_bonus_enum"`);
+    }
+
+}
