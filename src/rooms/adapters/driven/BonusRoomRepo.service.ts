@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { Equal, FindOptionsWhere, ILike, Repository } from 'typeorm';
 
 import type { RoomBasic, RoomQueryFilter } from '../../app/dto/room.schema';
 import { BonusRoom } from '../../app/entities/bonus-room.entity';
@@ -51,8 +51,17 @@ export class BonusRoomRepoService implements ForDatabaseRooms {
     if (filter.bonus !== undefined) {
       where.bonus = filter.bonus;
     }
-    if (filter.isActive !== undefined) {
-      where.isActive = filter.isActive;
+    if (filter.isActive !== undefined && filter.isActive !== null) {
+      // const isActive =
+      //   filter.isActive === 'true'
+      //     ? true
+      //     : filter.isActive === 'false'
+      //       ? false
+      //       : '';
+
+      // if (typeof isActive !== 'string') {
+        where.isActive = filter.isActive;
+      // }
     }
 
     const [list, count] = await this.roomModel.findAndCount({

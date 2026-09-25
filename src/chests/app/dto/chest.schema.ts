@@ -6,6 +6,7 @@ import {
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
 import { ChestPeriodType } from '../enums';
+import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 
 export const validationChestMessages = {
 	title: {
@@ -77,7 +78,7 @@ export const createChestSchema = z.object({
 		.number()
 		.int()
 		.min(0, validationChestMessages.experiencePoints.min),
-	isActive: z.coerce.boolean().default(true),
+	isActive: zBooleanQuery.default(true),
 	image: chestImageSchema.optional(),
 });
 

@@ -7,6 +7,7 @@ import {
 } from '../../../shared/swagger/apiResponse.schema';
 import { zDateHelper } from '../../../shared/swagger/date.schema';
 import { BonusIntern } from '../../../types/bonus';
+import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 
 export const validationRoomMessages = {
 	name: {
@@ -29,7 +30,7 @@ export const createRoomSchema = z.object({
 		.enum(BonusIntern, validationRoomMessages.bonus.enum)
 		.default(BonusIntern.Zero)
 		.describe('Bono porcentual que otorga la sala'),
-	isActive: z.coerce
+	isActive: z
 		.boolean()
 		.default(true)
 		.describe('Estado activo/inactivo de la sala'),
@@ -40,7 +41,7 @@ export const updateRoomSchema = createRoomSchema.partial();
 export const roomQueryFilterSchema = z.object({
 	name: z.string().optional(),
 	bonus: z.enum(BonusIntern).optional(),
-	isActive: z.coerce.boolean().optional(),
+	isActive: zBooleanQuery.nullable().optional(),
 	take: z.coerce.number().int().min(1).default(50).optional(),
 	skip: z.coerce.number().int().min(0).default(0).optional(),
 });
