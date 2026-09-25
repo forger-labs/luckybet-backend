@@ -12,8 +12,8 @@ import type { ForPanelApiCore } from '../../ports/forPanelApiCore.port';
 import type { PlayerAuthContext } from '../../types/panelApiCore.types';
 
 export interface RequestWithPlayer extends FastifyRequest {
-  player?: PlayerAuthContext;
-  token?: string;
+	player?: PlayerAuthContext;
+	token?: string;
 }
 
 @Injectable()
@@ -36,7 +36,7 @@ export class PlayerTokenGuard implements CanActivate {
 		const authContext = await this.panelCore.authenticatePlayer(token);
 
 		request.player = authContext;
-		request.token = token
+		request.token = token;
 		return true;
 	}
 

@@ -10,6 +10,7 @@ import type {
 } from '@/src/types/luckybetResponse';
 import { CACHE_PORT } from '../../../shared/cache/constants';
 import type { ForCache } from '../../../shared/cache/ports/forCache.port';
+import { LuckyBetGameItem } from '../../app/dtos/game.schema';
 import {
 	AXIOS_USER_PANEL,
 	DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS,
@@ -22,7 +23,6 @@ import type {
 	LuckyBetLoginResponseContent,
 	PlayerLastPlayedGameResult,
 } from '../../types/userPanel.types';
-import { LuckyBetGameItem } from '../../app/dtos/game.schema';
 
 @Injectable()
 export class UserPanelService implements ForUserPanel {

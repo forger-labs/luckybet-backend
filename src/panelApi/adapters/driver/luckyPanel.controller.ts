@@ -10,19 +10,19 @@ import type { ForUserPanel } from '../../panel.port';
 
 @Controller('panel')
 export class PanelController {
-  constructor(
-    @Inject(FOR_USER_PANEL)
-    private readonly userPanel: ForUserPanel,
-  ) {}
+	constructor(
+		@Inject(FOR_USER_PANEL)
+		private readonly userPanel: ForUserPanel,
+	) {}
 
-  @Get('/games')
-  @UseGuards(PlayerTokenGuard)
-  @ApiOkResponse({
-    type: LuckyBetGameItemResponseDTO,
-  })
-  async gameList(@CurrentToken() token: string) {
-    const gameList = await this.userPanel.getGameList(token);
+	@Get('/games')
+	@UseGuards(PlayerTokenGuard)
+	@ApiOkResponse({
+		type: LuckyBetGameItemResponseDTO,
+	})
+	async gameList(@CurrentToken() token: string) {
+		const gameList = await this.userPanel.getGameList(token);
 
-    return buildResponse(gameList, 'Lista de juegos obtenida', true);
-  }
+		return buildResponse(gameList, 'Lista de juegos obtenida', true);
+	}
 }

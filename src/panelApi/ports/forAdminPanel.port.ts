@@ -24,15 +24,12 @@ export interface ForAdminPanel {
 		options?: LuckyBetGetBalanceOptions,
 	): Promise<LuckyBetBalanceResponse>;
 
-	changePlayerSenior(
-		userId: string | number,
-		seniorName: string,
-	): Promise<boolean>;
+	changePlayerSenior(userId: string | number, seniorName: string): Promise<boolean>;
 
 	/**
 	 * Retrieves the current senior/room login of a player via area=useredit.
 	 */
-	getPlayerSenior(userId: string | number): Promise<string | null>
+	getPlayerSenior(userId: string | number): Promise<string | null>;
 
 	/**
 	 * Query player game session history (area=history).

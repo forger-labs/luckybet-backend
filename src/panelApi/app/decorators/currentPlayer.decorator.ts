@@ -10,7 +10,6 @@ export const CurrentPlayer = createParamDecorator(
 	},
 );
 
-
 export const CurrentToken = createParamDecorator(
 	(_data: unknown, ctx: ExecutionContext): string | null => {
 		const request = ctx.switchToHttp().getRequest<RequestWithPlayer>();

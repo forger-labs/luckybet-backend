@@ -41,7 +41,7 @@ export class AdminPanelService implements ForAdminPanel {
 			const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
 				return this.client.get<Record<string, unknown>>(url, {
 					headers: {
-						Accept: "application/json",
+						Accept: 'application/json',
 						Cookie: `PHPSESSID=${String(sessionId)}`,
 					},
 				});
@@ -51,8 +51,10 @@ export class AdminPanelService implements ForAdminPanel {
 			const senior = fields?.create_login?.value;
 			return senior ? String(senior).trim() : null;
 		} catch (error) {
-			const errorMsg: string = error instanceof Error ? error.message : "Unknown error";
-			this.logger.error("Error al obtener senior del jugador " + String(userId) + ": " + errorMsg);
+			const errorMsg: string = error instanceof Error ? error.message : 'Unknown error';
+			this.logger.error(
+				'Error al obtener senior del jugador ' + String(userId) + ': ' + errorMsg,
+			);
 			return null;
 		}
 	}
@@ -65,23 +67,25 @@ export class AdminPanelService implements ForAdminPanel {
 	): Promise<boolean> {
 		const url = `${this.panelHost}/index.php?act=admin&area=useredit&id=${userId}&response=js`;
 		const params = new URLSearchParams();
-		params.append("send", "true");
-		params.append("create_login", seniorName);
-		params.append("note", "");
-		params.append("name", "");
+		params.append('send', 'true');
+		params.append('create_login', seniorName);
+		params.append('note', '');
+		params.append('name', '');
 
 		const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
 			return this.client.post<Record<string, unknown>>(url, params.toString(), {
 				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					Accept: "application/json",
+					'Content-Type': 'application/x-www-form-urlencoded',
+					Accept: 'application/json',
 					Cookie: `PHPSESSID=${String(sessionId)}`,
 				},
 			});
 		});
 
 		if (data.error || data.errorMessage) {
-			this.logger.error(`Fallo al cambiar senior de usuario ${userId} a ${seniorName}: ${data.error || data.errorMessage}`);
+			this.logger.error(
+				`Fallo al cambiar senior de usuario ${userId} a ${seniorName}: ${data.error || data.errorMessage}`,
+			);
 			return false;
 		}
 

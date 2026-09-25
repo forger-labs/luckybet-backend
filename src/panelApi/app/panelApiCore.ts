@@ -13,14 +13,14 @@ import { ConfigService } from '@nestjs/config';
 
 import { PlayerRepoService } from '@/src/players/adapters/driven/PlayerRepo.service';
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
-import { FOR_DATABASE_ROOMS } from '../../rooms/app/constants';
-import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
-import { BonusIntern } from '../../types/bonus';
 import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
 import { STORAGE_SERVICE } from '@/src/shared/storage/storage.constants';
 import type { StorageService } from '@/src/shared/storage/storage.port';
+import { FOR_DATABASE_ROOMS } from '../../rooms/app/constants';
+import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
 import { CACHE_PORT } from '../../shared/cache/constants';
 import type { ForCache } from '../../shared/cache/ports/forCache.port';
+import { BonusIntern } from '../../types/bonus';
 import {
 	DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS,
 	FOR_ADMIN_PANEL,
@@ -187,14 +187,18 @@ export class PanelApiCore implements ForPanelApiCore {
 				if (this.adminPanel?.getPlayerSenior) {
 					const targetId = await this.resolveLuckyBetUserId(username).catch(() => null);
 					if (targetId) {
-						seniorName = await this.adminPanel.getPlayerSenior(targetId).catch(() => null);
+						seniorName = await this.adminPanel
+							.getPlayerSenior(targetId)
+							.catch(() => null);
 					}
 				}
 
 				if (seniorName && this.roomRepo) {
 					let room = await this.roomRepo.findByName(seniorName);
 					if (!room) {
-						this.logger.log(`Auto-creando nueva sala descubierta desde LuckyBet: ${seniorName} con bonus 0`);
+						this.logger.log(
+							`Auto-creando nueva sala descubierta desde LuckyBet: ${seniorName} con bonus 0`,
+						);
 						room = await this.roomRepo.createRoom({
 							name: seniorName,
 							bonus: BonusIntern.Zero,
@@ -204,8 +208,10 @@ export class PanelApiCore implements ForPanelApiCore {
 					assignedRoomId = room.id;
 				}
 			} catch (err) {
-				const errorMsg: string = err instanceof Error ? err.message : "Unknown error";
-				this.logger.warn("No se pudo sincronizar la sala de LuckyBet para " + username + ": " + errorMsg);
+				const errorMsg: string = err instanceof Error ? err.message : 'Unknown error';
+				this.logger.warn(
+					'No se pudo sincronizar la sala de LuckyBet para ' + username + ': ' + errorMsg,
+				);
 			}
 
 			const created = await this.playerRepo.createPlayer({

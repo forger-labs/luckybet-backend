@@ -44,9 +44,9 @@ describe('PanelApiCore', () => {
 			debitPlayer: jest.fn(),
 			getLastPlayedGames: jest.fn(),
 			ensureSession: jest.fn(),
-      invalidateSession: jest.fn(),
-      changePlayerSenior: jest.fn(),
-			getPlayerSenior:jest.fn()
+			invalidateSession: jest.fn(),
+			changePlayerSenior: jest.fn(),
+			getPlayerSenior: jest.fn(),
 		};
 
 		cacheMock = {
@@ -61,8 +61,8 @@ describe('PanelApiCore', () => {
 			createPlayer: jest.fn(),
 			findByUnique: jest.fn(),
 			getPlayers: jest.fn(),
-      updatePlayerById: jest.fn(),
-			addExperienceAndRecalculateLevel: jest.fn()
+			updatePlayerById: jest.fn(),
+			addExperienceAndRecalculateLevel: jest.fn(),
 		};
 
 		panelApiCore = new PanelApiCore(
