@@ -6,7 +6,7 @@ import {
 import { FindOptionsWhere, MoreThanOrEqual } from 'typeorm';
 
 import type { ForPanelApiCore } from '@/src/panelApi/ports/forPanelApiCore.port';
-import type { ForDatabasePlayers } from '@/src/players/ports/driver/ForDatabasePlayers';
+import { ForManagePlayers } from '@/src/players/ports/driven/ForManagePlayers';
 import type { ForManageRewards } from '@/src/rewards/ports/driven/ForManageRewards';
 import { ForDatabaseUsers } from '@/src/users/ports/driver/ForDatabaseUsers';
 import type { StorageService, UploadableFile } from '../../shared/storage/storage.port';
@@ -46,9 +46,9 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		private readonly stepRepo: ForDatabaseUserMissionSteps,
 		private readonly userRepo: ForDatabaseUsers,
 		private readonly storage: StorageService,
-		private readonly panelApi?: ForPanelApiCore,
-		private readonly playerRepo?: ForDatabasePlayers,
-		private readonly rewardsCore?: ForManageRewards,
+		private readonly panelApi: ForPanelApiCore,
+		private readonly playerCore: ForManagePlayers,
+		private readonly rewardsCore: ForManageRewards,
 	) {}
 
 	private toPublicUrl(key: string | null | undefined): string | undefined {
@@ -62,7 +62,10 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 
 		const imageUrl = await this.storage.uploadImage(image, 'missions');
 		try {
-			const mission = await this.missionRepo.createMission({ ...missionData, imageUrl });
+			const mission = await this.missionRepo.createMission({
+				...missionData,
+				imageUrl,
+			});
 			mission.imageUrl = this.toPublicUrl(mission.imageUrl);
 			return mission;
 		} catch (error) {
@@ -327,10 +330,6 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			);
 		}
 
-		if (!this.panelApi) {
-			throw new BadRequestException('Servicio de conexion con panel no disponible');
-		}
-
 		const targetConfig = stepDef.targetConfig;
 		const history = await this.panelApi.getLastPlayedGames(playerId, {
 			provider: targetConfig?.provider,
@@ -422,23 +421,22 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		await this.userMissionRepo.updateStatus(userMissionId, UserMissionStatus.COMPLETED);
 
 		// 2. Acreditar experiencia de forma inmediata y recalcular nivel con actualizacion de sala en LuckyBet
-		if (mission.experiencePoints > 0 && this.playerRepo) {
-			await this.playerRepo.addExperienceAndRecalculateLevel(
+		if (mission.experiencePoints > 0) {
+			await this.playerCore.addExperienceAndRecalculateLevel(
 				playerId,
 				mission.experiencePoints,
 			);
 		}
 
 		// 3. Crear registro en el Ledger de Recompensas (RewardsCore) transfiriendo el bono correspondiente
-		if (this.rewardsCore) {
-			await this.rewardsCore.createReward({
-				userMissionId,
-				playerId,
-				coinsAmount: mission.coinsAmount,
-				roomId: mission.roomId,
-				experiencePoints: mission.experiencePoints,
-			});
-		}
+
+		await this.rewardsCore.createReward({
+			userMissionId,
+			playerId,
+			coinsAmount: mission.coinsAmount,
+			roomId: mission.roomId,
+			experiencePoints: mission.experiencePoints,
+		});
 	}
 
 	async getPlayerMissions(

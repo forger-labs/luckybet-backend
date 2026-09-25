@@ -4,12 +4,6 @@ import * as z from 'zod';
 import { validationPlayerMessages } from './player.schema';
 
 export const playerSchemaOptional = z.object({
-	username: z
-		.string(validationPlayerMessages.username.string)
-		.min(1, validationPlayerMessages.username.min)
-		.max(100, validationPlayerMessages.username.max)
-		.optional()
-		.describe(validationPlayerMessages.username.describe),
 	phone: z
 		.string(validationPlayerMessages.phone.string)
 		.max(20, validationPlayerMessages.phone.max)
@@ -20,12 +14,6 @@ export const playerSchemaOptional = z.object({
 		.boolean(validationPlayerMessages.isActive.boolean)
 		.optional()
 		.describe(validationPlayerMessages.isActive.describe),
-	experience: z
-		.number()
-		.default(0)
-		.nullable()
-		.optional()
-		.describe(validationPlayerMessages.experience.describe),
 });
 
 export class UpdatePlayerDto extends createZodDto(playerSchemaOptional) {}

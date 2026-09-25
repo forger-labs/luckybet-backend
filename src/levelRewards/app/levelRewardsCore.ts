@@ -22,8 +22,6 @@ import { FOR_DATABASE_LEVEL_REWARDS } from './constants';
 import {
 	type LevelRewardBasic,
 	type LevelRewardFilter,
-	LevelRewardSortField,
-	SortOrder,
 } from './dto/level-reward.schema';
 
 @Injectable()

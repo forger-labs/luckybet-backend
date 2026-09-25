@@ -20,5 +20,4 @@ export interface ForManageRooms {
 		limit: number;
 		skip: number;
 	}>;
-
 }

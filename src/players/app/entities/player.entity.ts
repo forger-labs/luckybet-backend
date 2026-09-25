@@ -28,7 +28,7 @@ export class Player extends BaseEntity {
 		name: 'is_active',
 	})
 	isActive!: boolean;
-
+	// TODO: delete createdById, our platform does not create users
 	@Column({
 		type: 'integer',
 		nullable: true,

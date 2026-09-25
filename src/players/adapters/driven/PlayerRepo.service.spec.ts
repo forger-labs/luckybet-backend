@@ -2,25 +2,12 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
-import { LEVELS_CORE_PROVIDER } from '@/src/levels/app/constants';
-import type { LevelType } from '@/src/levels/app/dto/level.schema';
-import type { ForManageLevels } from '@/src/levels/ports/drivens/forManageLevels';
 import { Player } from '../../app/entities/player.entity';
 import { PlayerRepoService } from '../driven/PlayerRepo.service';
 
 describe('PlayerRepoService', () => {
 	let service: PlayerRepoService;
 	let playerRepoMock: jest.Mocked<Repository<Player>>;
-	let levelsCoreMock: jest.Mocked<ForManageLevels>;
-
-	const mockLowestLevel: LevelType = {
-		id: 1,
-		name: 'Nivel 1 Base',
-		image: 'https://cdn.example.com/lvl1.png',
-		minExperience: 0,
-		coins: 100,
-		bonus: null,
-	};
 
 	const mockPlayerEntity: Player = {
 		id: 1,
@@ -29,25 +16,18 @@ describe('PlayerRepoService', () => {
 		isActive: true,
 		levelId: 1,
 		experience: 0,
-		createdAt: new Date(),
-		updatedAt: new Date(),
+		created_at: new Date(),
+		updated_at: new Date(),
 	} as unknown as Player;
 
 	beforeEach(async () => {
 		playerRepoMock = {
 			create: jest.fn(),
 			save: jest.fn(),
+			update: jest.fn(),
 			findOne: jest.fn(),
 			findAndCount: jest.fn(),
 		} as unknown as jest.Mocked<Repository<Player>>;
-
-		levelsCoreMock = {
-			getLowestLevel: jest.fn(),
-			createLevel: jest.fn(),
-			updateLevel: jest.fn(),
-			getLevelById: jest.fn(),
-			getLevels: jest.fn(),
-		};
 
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
@@ -56,10 +36,6 @@ describe('PlayerRepoService', () => {
 					provide: getRepositoryToken(Player),
 					useValue: playerRepoMock,
 				},
-				{
-					provide: LEVELS_CORE_PROVIDER,
-					useValue: levelsCoreMock,
-				},
 			],
 		}).compile();
 
@@ -67,8 +43,7 @@ describe('PlayerRepoService', () => {
 	});
 
 	describe('createPlayer', () => {
-		it('should automatically fetch and assign the lowest level via LevelsCore (Redis cache) when levelId is not provided', async () => {
-			levelsCoreMock.getLowestLevel.mockResolvedValueOnce(mockLowestLevel);
+		it('should create and save player with provided data', async () => {
 			playerRepoMock.create.mockReturnValueOnce({
 				...mockPlayerEntity,
 				levelId: 1,
@@ -82,79 +57,68 @@ describe('PlayerRepoService', () => {
 				username: 'testplayer',
 				phone: '12345678',
 				isActive: true,
+				levelId: 1,
 			});
 
-			expect(levelsCoreMock.getLowestLevel).toHaveBeenCalled();
 			expect(playerRepoMock.create).toHaveBeenCalledWith({
 				username: 'testplayer',
 				phone: '12345678',
 				isActive: true,
+				experience: 0,
 				levelId: 1,
+				roomId: undefined,
 			});
 			expect(result.levelId).toBe(1);
-			expect(result.level).toMatchObject({
-				id: 1,
-				name: 'Nivel 1 Base',
-			});
-		});
-
-		it('should keep explicit levelId if provided during creation without querying lowest level', async () => {
-			playerRepoMock.create.mockReturnValueOnce({
-				...mockPlayerEntity,
-				levelId: 5,
-			});
-			playerRepoMock.save.mockResolvedValueOnce({
-				...mockPlayerEntity,
-				levelId: 5,
-			});
-
-			const result = await service.createPlayer({
-				username: 'testplayer',
-				levelId: 5,
-				isActive: true,
-			});
-
-			expect(levelsCoreMock.getLowestLevel).not.toHaveBeenCalled();
-			expect(playerRepoMock.create).toHaveBeenCalledWith(
-				expect.objectContaining({
-					levelId: 5,
-				}),
-			);
-			expect(result.levelId).toBe(5);
-		});
-
-		it('should handle table levels empty gracefully by leaving levelId null', async () => {
-			levelsCoreMock.getLowestLevel.mockResolvedValueOnce(null);
-			playerRepoMock.create.mockReturnValueOnce({
-				...mockPlayerEntity,
-			});
-			playerRepoMock.save.mockResolvedValueOnce({
-				...mockPlayerEntity,
-				levelId: null as unknown as number,
-			});
-
-			const result = await service.createPlayer({
-				username: 'testplayer',
-				isActive: true,
-			});
-
-			expect(levelsCoreMock.getLowestLevel).toHaveBeenCalled();
-			expect(result.levelId).toBeNull();
+			expect(result.username).toBe('testplayer');
 		});
 	});
 
-	describe('findByUnique', () => {
-		it('should find player by unique fields with level relation', async () => {
-			playerRepoMock.findOne.mockResolvedValueOnce({
-				...mockPlayerEntity,
-				level: mockLowestLevel as unknown as Player['level'],
+	describe('updatePlayerById', () => {
+		it('should call playerModel.update directly instead of save', async () => {
+			playerRepoMock.update.mockResolvedValueOnce({
+				affected: 1,
+				raw: [],
+				generatedMaps: [],
+			});
+			playerRepoMock.findOne.mockResolvedValueOnce(mockPlayerEntity);
+
+			const result = await service.updatePlayerById(1, { phone: '99999999' });
+
+			expect(playerRepoMock.update).toHaveBeenCalledWith(1, { phone: '99999999' });
+			expect(playerRepoMock.save).not.toHaveBeenCalled();
+			expect(result?.phone).toBe('12345678');
+		});
+
+		it('should return null if user does not exist', async () => {
+			playerRepoMock.update.mockResolvedValueOnce({
+				affected: 0,
+				raw: [],
+				generatedMaps: [],
+			});
+			playerRepoMock.findOne.mockResolvedValueOnce(null);
+
+			const result = await service.updatePlayerById(999, { phone: '99999999' });
+
+			expect(result).toBeNull();
+		});
+	});
+
+	describe('addExperience', () => {
+		it('should increment player experience using update and return new total', async () => {
+			playerRepoMock.findOne
+				.mockResolvedValueOnce({ id: 1, experience: 100 } as Player)
+				.mockResolvedValueOnce({ ...mockPlayerEntity, experience: 150 });
+			playerRepoMock.update.mockResolvedValueOnce({
+				affected: 1,
+				raw: [],
+				generatedMaps: [],
 			});
 
-			const result = await service.findByUnique({ username: 'testplayer' });
+			const result = await service.addExperience(1, 50);
 
-			expect(result).not.toBeNull();
-			expect(result?.username).toBe('testplayer');
-			expect(result?.level?.name).toBe('Nivel 1 Base');
+			expect(playerRepoMock.update).toHaveBeenCalledWith(1, { experience: 150 });
+			expect(result.previousExperience).toBe(100);
+			expect(result.newExperience).toBe(150);
 		});
 	});
 });

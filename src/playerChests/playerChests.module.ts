@@ -11,9 +11,9 @@ import type { ForDatabaseUserMissions } from '../misiones/ports/driver/ForDataba
 import { FOR_PANEL_API_CORE } from '../panelApi/constants';
 import { PanelModule } from '../panelApi/panel.module';
 import type { ForPanelApiCore } from '../panelApi/ports/forPanelApiCore.port';
-import { PlayerRepoService } from '../players/adapters/driven/PlayerRepo.service';
+import { PLAYER_CORE_PROVIDER } from '../players/app/constants';
 import { PlayersModule } from '../players/players.module';
-import type { ForDatabasePlayers } from '../players/ports/driver/ForDatabasePlayers';
+import type { ForManagePlayers } from '../players/ports/driven/ForManagePlayers';
 import { RewardsModule } from '../rewards/rewards.module';
 import { FOR_DATABASE_ROOMS } from '../rooms/app/constants';
 import type { ForDatabaseRooms } from '../rooms/ports/driver/ForDatabaseRooms';
@@ -49,7 +49,7 @@ import type { ForDatabasePlayerChests } from './ports/driver/ForDatabasePlayerCh
 				chestsCore: ForManageChests,
 				userMissionRepo: ForDatabaseUserMissions,
 				panelApi: ForPanelApiCore,
-				playerRepo: ForDatabasePlayers,
+				playerCore: ForManagePlayers,
 				roomRepo: ForDatabaseRooms,
 			) =>
 				new PlayerChestsCore(
@@ -57,7 +57,7 @@ import type { ForDatabasePlayerChests } from './ports/driver/ForDatabasePlayerCh
 					chestsCore,
 					userMissionRepo,
 					panelApi,
-					playerRepo,
+					playerCore,
 					roomRepo,
 				),
 			inject: [
@@ -65,7 +65,7 @@ import type { ForDatabasePlayerChests } from './ports/driver/ForDatabasePlayerCh
 				CHESTS_CORE_PROVIDER,
 				UserMissionRepoService,
 				FOR_PANEL_API_CORE,
-				PlayerRepoService,
+				PLAYER_CORE_PROVIDER,
 				FOR_DATABASE_ROOMS,
 			],
 		},

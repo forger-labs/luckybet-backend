@@ -2,14 +2,14 @@ import type { PlayerGameHistoryResult } from '@/src/panelApi/types/adminPanel.ty
 import type { PlayerAuthContext } from '@/src/panelApi/types/panelApiCore.types';
 import type { PlayerLastPlayedGameResult } from '@/src/panelApi/types/userPanel.types';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
-import { PlayerResponse } from '../../app/dto/player.schema';
+import type { PlayerFilter, PlayerResponse } from '../../app/dto/player.schema';
 import type { PlayerPlayedGamesFilter } from '../../app/dto/player-games.dto';
 import { UpdatePlayerDto } from '../../app/dto/update-player.dto';
 
 export interface ForManagePlayers {
 	createPlayer(playerData: CreatePlayerDto): Promise<PlayerResponse>;
 	findById(id: number): Promise<PlayerResponse>;
-	getPlayers(params: { take?: number; skip?: number }): Promise<{
+	getPlayers(filter?: PlayerFilter): Promise<{
 		players: PlayerResponse[];
 		total: number;
 		limit: number;
@@ -21,4 +21,12 @@ export interface ForManagePlayers {
 		player: PlayerAuthContext,
 		filter?: PlayerPlayedGamesFilter & { token?: string },
 	): Promise<PlayerGameHistoryResult>;
+	addExperienceAndRecalculateLevel(
+		playerId: number,
+		expPoints: number,
+	): Promise<{
+		player: PlayerResponse;
+		upgradedLevel: boolean;
+		newLevelId?: number;
+	}>;
 }

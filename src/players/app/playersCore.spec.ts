@@ -49,7 +49,8 @@ describe('PlayersCore', () => {
 			findByUnique: jest.fn(),
 			getPlayers: jest.fn(),
 			updatePlayerById: jest.fn(),
-			addExperienceAndRecalculateLevel: jest.fn(),
+			addExperience: jest.fn(),
+			updateLevel: jest.fn(),
 		};
 
 		panelApiCoreMock = {
@@ -64,7 +65,13 @@ describe('PlayersCore', () => {
 			changePlayerSenior: jest.fn(),
 		};
 
-		core = new PlayersCore(playersRepoMock, panelApiCoreMock);
+		core = new PlayersCore(
+			playersRepoMock,
+			undefined,
+			undefined,
+			undefined,
+			panelApiCoreMock,
+		);
 	});
 
 	describe('createPlayer', () => {

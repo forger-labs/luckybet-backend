@@ -4,6 +4,7 @@ import {
 	BadRequestException,
 	Inject,
 	Injectable,
+	InternalServerErrorException,
 	Logger,
 	NotFoundException,
 	Optional,
@@ -41,6 +42,8 @@ import type {
 	PlayerAuthContext,
 } from '../types/panelApiCore.types';
 import type { PlayerLastPlayedGameResult } from '../types/userPanel.types';
+import { LEVELS_REPO_PROVIDER } from '@/src/levels/app/constants';
+import type { ForDatabaseLevels } from '@/src/levels/ports/drivers/forDatabaseLevels';
 
 @Injectable()
 export class PanelApiCore implements ForPanelApiCore {
@@ -67,12 +70,12 @@ export class PanelApiCore implements ForPanelApiCore {
 		private readonly cache: ForCache,
 		@Inject(PlayerRepoService)
 		private readonly playerRepo: ForDatabasePlayers,
+    @Inject(LEVELS_REPO_PROVIDER)
+		private readonly levelsRepo: ForDatabaseLevels,
 		@Inject(STORAGE_SERVICE)
-		@Optional()
-		private readonly storage?: StorageService,
+		private readonly storage: StorageService,
 		@Inject(FOR_DATABASE_ROOMS)
-		@Optional()
-		private readonly roomRepo?: ForDatabaseRooms,
+    private readonly roomRepo: ForDatabaseRooms,
 	) {
 		this.sessionTtl = Number(
 			config.get<number | string>(
@@ -87,7 +90,7 @@ export class PanelApiCore implements ForPanelApiCore {
 		if (key.startsWith('http://') || key.startsWith('https://')) {
 			return key;
 		}
-		return this.storage ? this.storage.buildPublicUrl(key) : key;
+    return this.storage.buildPublicUrl(key);
 	}
 
 	/**
@@ -184,16 +187,14 @@ export class PanelApiCore implements ForPanelApiCore {
 			let assignedRoomId: number | undefined;
 			try {
 				let seniorName: string | null = null;
-				if (this.adminPanel?.getPlayerSenior) {
-					const targetId = await this.resolveLuckyBetUserId(username).catch(() => null);
-					if (targetId) {
-						seniorName = await this.adminPanel
-							.getPlayerSenior(targetId)
-							.catch(() => null);
-					}
+				const targetId = await this.resolveLuckyBetUserId(username).catch(() => null);
+				if (targetId) {
+					seniorName = await this.adminPanel
+						.getPlayerSenior(targetId)
+						.catch(() => null);
 				}
 
-				if (seniorName && this.roomRepo) {
+				if (seniorName) {
 					let room = await this.roomRepo.findByName(seniorName);
 					if (!room) {
 						this.logger.log(
@@ -214,11 +215,19 @@ export class PanelApiCore implements ForPanelApiCore {
 				);
 			}
 
+      const level = await this.levelsRepo.findLowestLevel()
+
+      if (!level) {
+        this.logger.error("No existen niveles. Llena la base de datos con niveles")
+        throw new InternalServerErrorException("Ocurrio un error inesperado")
+			}
+
 			const created = await this.playerRepo.createPlayer({
 				username,
 				phone,
 				isActive: true,
-				roomId: assignedRoomId,
+        roomId: assignedRoomId,
+				levelId: level.id
 			});
 			return {
 				...created,

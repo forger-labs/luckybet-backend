@@ -273,10 +273,58 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 #### `GET /api/v1.0/players`
-- **Propósito**: Listado paginado de jugadores para administradores.
+- **Propósito**: Listado paginado y filtrado de jugadores para administradores con ordenamiento temporal.
+- **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
-- **Query Params**: `take` (number, default 100), `skip` (number, default 0).
-- **Respuesta (`200 OK`)**: Array paginado de jugadores con `id`, `username`, `phone`, `isActive`, `experience`, `levelId`, `level`, `roomId`, `room`.
+- **Query Params**:
+  - `username` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas.
+  - `phone` *(string, opcional)*: Búsqueda parcial por teléfono.
+  - `levelId` *(number, opcional)*: Filtrar por ID de nivel exacto.
+  - `minExperience` *(number, opcional)*: Experiencia mínima (`>=`).
+  - `maxExperience` *(number, opcional)*: Experiencia máxima (`<=`).
+  - `roomId` *(number, opcional)*: Filtrar por ID de sala asignada.
+  - `isActive` *(boolean / enum: `true` | `false`, opcional)*: Filtro por estado activo/inactivo (soporta boolean o string `"true"`/`"false"`).
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*: Orden por fecha de creación (`created_at`).
+  - `take` *(number, default: 50, max: 100)*: Cantidad de registros por página.
+  - `skip` *(number, default: 0)*: Offset de paginación.
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Players obtenidos exitosamente",
+    "data": [
+      {
+        "id": 10,
+        "username": "jugador123",
+        "phone": "+584121234567",
+        "isActive": true,
+        "experience": 150,
+        "levelId": 1,
+        "level": {
+          "id": 1,
+          "name": "Nivel Bronce",
+          "image": "https://cdn.example.com/levels/bronce.png",
+          "minExperience": 0
+        },
+        "roomId": 1,
+        "room": {
+          "id": 1,
+          "name": "SalaGeneral",
+          "bonus": "0",
+          "isActive": true
+        }
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "totalPages": 1,
+      "page": 1,
+      "limit": 50,
+      "hasPreviousPage": false,
+      "hasNextPage": false
+    }
+  }
+  ```
 
 #### `GET /api/v1.0/players/me`
 - **Propósito**: Perfil del jugador autenticado. Si el jugador no existe localmente, se sincroniza en automático creando su registro y asociándole su sala real de LuckyBet.

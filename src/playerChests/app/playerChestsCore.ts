@@ -14,8 +14,8 @@ import { UserMissionRepoService } from '../../misiones/adapters/driven/UserMissi
 import type { ForDatabaseUserMissions } from '../../misiones/ports/driver/ForDatabaseUserMissions';
 import { FOR_PANEL_API_CORE } from '../../panelApi/constants';
 import type { ForPanelApiCore } from '../../panelApi/ports/forPanelApiCore.port';
-import { PlayerRepoService } from '../../players/adapters/driven/PlayerRepo.service';
-import type { ForDatabasePlayers } from '../../players/ports/driver/ForDatabasePlayers';
+import { PLAYER_CORE_PROVIDER } from '../../players/app/constants';
+import type { ForManagePlayers } from '../../players/ports/driven/ForManagePlayers';
 import { RewardAction, RewardStatus } from '../../rewards/app/enums';
 import { FOR_DATABASE_ROOMS } from '../../rooms/app/constants';
 import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
@@ -42,8 +42,8 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		private readonly userMissionRepo: ForDatabaseUserMissions,
 		@Inject(FOR_PANEL_API_CORE)
 		private readonly panelApi: ForPanelApiCore,
-		@Inject(PlayerRepoService)
-		private readonly playerRepo: ForDatabasePlayers,
+		@Inject(PLAYER_CORE_PROVIDER)
+		private readonly playerCore: ForManagePlayers,
 		@Inject(FOR_DATABASE_ROOMS)
 		private readonly roomRepo: ForDatabaseRooms,
 	) {}
@@ -231,7 +231,7 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		}
 
 		// Obtener username y sala base actual del jugador
-		const player = await this.playerRepo.findByUnique({ id: playerId });
+		const player = await this.playerCore.findById(playerId);
 
 		if (!player) {
 			throw new BadRequestException('Este jugador no existe en nuestra base de datos');
@@ -293,8 +293,8 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		}
 
 		// 3. Acreditar experiencia de inmediato y recalcular nivel (sin cambio de sala permanente)
-		if (chest.experiencePoints > 0 && this.playerRepo) {
-			await this.playerRepo.addExperienceAndRecalculateLevel(
+		if (chest.experiencePoints > 0 && this.playerCore) {
+			await this.playerCore.addExperienceAndRecalculateLevel(
 				playerId,
 				chest.experiencePoints,
 			);

@@ -19,5 +19,4 @@ export interface ForDatabaseRooms {
 	updateRoom(id: number, data: UpdateRoomInput): Promise<RoomBasic | null>;
 
 	getRooms(filter: RoomQueryFilter): Promise<[RoomBasic[], number]>;
-
 }

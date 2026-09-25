@@ -29,6 +29,7 @@ import { UsersModule } from './users/users.module';
 			inject: [ConfigService],
 			useFactory: (config: ConfigService) => buildTypeOrmOptionsFromConfig(config),
 		}),
+		LevelsModule,
 		HealthModule,
 		AuthModule,
 		UsersModule,
@@ -42,7 +43,6 @@ import { UsersModule } from './users/users.module';
 		RewardsModule,
 		ChestsModule,
 		PlayerChestsModule,
-		LevelsModule,
 		LevelRewardsModule,
 	],
 	providers: [

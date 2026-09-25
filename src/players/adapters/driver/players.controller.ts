@@ -31,7 +31,11 @@ import {
 } from '../../../shared/libs/buildResponse';
 import { PLAYER_CORE_PROVIDER } from '../../app/constants';
 import { CreatePlayerDto } from '../../app/dto/create-player.dto';
-import { PlayerListResponseDto, PlayerResponseDto } from '../../app/dto/player.schema';
+import {
+	PlayerFilterDto,
+	PlayerListResponseDto,
+	PlayerResponseDto,
+} from '../../app/dto/player.schema';
 import {
 	PlayerGameHistoryResponseDto,
 	PlayerLastPlayedGameResponseDto,
@@ -59,14 +63,24 @@ export class PlayersController {
 	@Get()
 	@ApiCookieAuth()
 	@HttpCode(HttpStatus.OK)
-	@ApiCreatedResponse({ type: PlayerListResponseDto })
+	@ApiOkResponse({ type: PlayerListResponseDto })
+	@ApiQuery({ name: 'username', required: false, type: String })
+	@ApiQuery({ name: 'phone', required: false, type: String })
+	@ApiQuery({ name: 'levelId', required: false, type: Number })
+	@ApiQuery({ name: 'minExperience', required: false, type: Number })
+	@ApiQuery({ name: 'maxExperience', required: false, type: Number })
+	@ApiQuery({ name: 'roomId', required: false, type: Number })
+	@ApiQuery({ name: 'isActive', required: false, type: Boolean })
+	@ApiQuery({
+		name: 'orderDirection',
+		required: false,
+		enum: ['ASC', 'DESC'],
+		description: 'Orden por fecha de creación (ASC o DESC)',
+	})
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
-	async findAll(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
-		const response = await this.playersCore.getPlayers({ take, skip });
+	async findAll(@Query() filter: PlayerFilterDto) {
+		const response = await this.playersCore.getPlayers(filter);
 
 		return buildPaginatedResponse(
 			response.players,

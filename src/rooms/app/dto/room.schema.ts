@@ -1,13 +1,13 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
 import { zDateHelper } from '../../../shared/swagger/date.schema';
 import { BonusIntern } from '../../../types/bonus';
-import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 
 export const validationRoomMessages = {
 	name: {
@@ -30,10 +30,7 @@ export const createRoomSchema = z.object({
 		.enum(BonusIntern, validationRoomMessages.bonus.enum)
 		.default(BonusIntern.Zero)
 		.describe('Bono porcentual que otorga la sala'),
-	isActive: z
-		.boolean()
-		.default(true)
-		.describe('Estado activo/inactivo de la sala'),
+	isActive: z.boolean().default(true).describe('Estado activo/inactivo de la sala'),
 });
 
 export const updateRoomSchema = createRoomSchema.partial();

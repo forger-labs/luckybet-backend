@@ -4,7 +4,7 @@ import { ChestPeriodType } from '../../chests/app/enums';
 import type { ForManageChests } from '../../chests/ports/driven/ForManageChests';
 import type { ForDatabaseUserMissions } from '../../misiones/ports/driver/ForDatabaseUserMissions';
 import type { ForPanelApiCore } from '../../panelApi/ports/forPanelApiCore.port';
-import type { ForDatabasePlayers } from '../../players/ports/driver/ForDatabasePlayers';
+import type { ForManagePlayers } from '../../players/ports/driven/ForManagePlayers';
 import { RewardStatus } from '../../rewards/app/enums';
 import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
 import { BonusIntern } from '../../types/bonus';
@@ -18,7 +18,7 @@ describe('PlayerChestsCore', () => {
 	let mockChestsCore: jest.Mocked<ForManageChests>;
 	let mockUserMissionRepo: jest.Mocked<ForDatabaseUserMissions>;
 	let mockPanelApi: jest.Mocked<ForPanelApiCore>;
-	let mockPlayerRepo: jest.Mocked<ForDatabasePlayers>;
+	let mockPlayerCore: jest.Mocked<ForManagePlayers>;
 	let mockRoomRepo: jest.Mocked<ForDatabaseRooms>;
 
 	const mockBaseRoom = {
@@ -90,11 +90,13 @@ describe('PlayerChestsCore', () => {
 			changePlayerSenior: jest.fn(),
 		};
 
-		mockPlayerRepo = {
+		mockPlayerCore = {
 			createPlayer: jest.fn(),
 			updatePlayerById: jest.fn(),
 			getPlayers: jest.fn(),
-			findByUnique: jest.fn(),
+			findById: jest.fn(),
+			getLastPlayedGame: jest.fn(),
+			getPlayedGames: jest.fn(),
 			addExperienceAndRecalculateLevel: jest.fn(),
 		};
 
@@ -112,7 +114,7 @@ describe('PlayerChestsCore', () => {
 			mockChestsCore,
 			mockUserMissionRepo,
 			mockPanelApi,
-			mockPlayerRepo,
+			mockPlayerCore,
 			mockRoomRepo,
 		);
 	});
@@ -192,7 +194,7 @@ describe('PlayerChestsCore', () => {
 			status: RewardStatus.PROCESSING,
 		});
 
-		mockPlayerRepo.findByUnique.mockResolvedValue({
+		mockPlayerCore.findById.mockResolvedValue({
 			id: 10,
 			username: 'player_test',
 			experience: 0,
@@ -221,7 +223,7 @@ describe('PlayerChestsCore', () => {
 
 		const result = await core.claimChest(1, 10);
 
-		expect(mockPlayerRepo.addExperienceAndRecalculateLevel).toHaveBeenCalledWith(10, 100);
+		expect(mockPlayerCore.addExperienceAndRecalculateLevel).toHaveBeenCalledWith(10, 100);
 		expect(mockPanelApi.changePlayerSenior).toHaveBeenNthCalledWith(
 			1,
 			'player_test',
@@ -251,7 +253,7 @@ describe('PlayerChestsCore', () => {
 			status: RewardStatus.PROCESSING,
 		});
 
-		mockPlayerRepo.findByUnique.mockResolvedValue({
+		mockPlayerCore.findById.mockResolvedValue({
 			id: 10,
 			username: 'player_test',
 			experience: 0,

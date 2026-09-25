@@ -6,6 +6,7 @@ import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
+import { zBooleanQuery } from '../../../shared/swagger/boolean.schema';
 
 export const validationPlayerMessages = {
 	username: {
@@ -32,6 +33,11 @@ export const validationPlayerMessages = {
 		describe: 'Indica la cantidad de experiencia del jugador',
 	},
 };
+
+export enum SortOrder {
+	ASC = 'ASC',
+	DESC = 'DESC',
+}
 
 export const playerSchema = z.object({
 	id: z.number().optional().describe('ID del jugador'),
@@ -87,7 +93,46 @@ export const createPlayerSchema = playerSchema.omit({
 	room: true,
 });
 
+export const playerFilterSchema = z.object({
+	username: z.string().optional().describe('Búsqueda parcial por username'),
+	phone: z.string().optional().describe('Búsqueda parcial por teléfono'),
+	levelId: z.coerce.number().int().positive().optional().describe('Filtrar por nivel'),
+	minExperience: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.optional()
+		.describe('Experiencia mínima (>=)'),
+	maxExperience: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.optional()
+		.describe('Experiencia máxima (<=)'),
+	roomId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por ID de sala'),
+	isActive: zBooleanQuery.optional().describe('Filtrar por estado activo/inactivo'),
+	orderDirection: z
+    .enum(SortOrder)
+		.default(SortOrder.DESC)
+		.optional()
+		.describe('Orden por fecha de creación (ASC o DESC, por defecto DESC)'),
+	take: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(100)
+		.default(50)
+		.describe('Cantidad de registros'),
+	skip: z.coerce.number().int().min(0).default(0).describe('Paginación / Offset'),
+});
+
 export type Player = z.infer<typeof playerSchema>;
+export type PlayerFilter = z.infer<typeof playerFilterSchema>;
 
 export type PlayerCreateResponse = Required<
 	Omit<Player, 'id' | 'level' | 'levelId' | 'roomId' | 'room'>
@@ -138,3 +183,4 @@ export const PlayerListResponseSchema = paginatedResponseSchema(playerSchema);
 
 export class PlayerListResponseDto extends createZodDto(PlayerListResponseSchema) {}
 export class PlayerResponseDto extends createZodDto(PlayerResponseSchema) {}
+export class PlayerFilterDto extends createZodDto(playerFilterSchema) {}

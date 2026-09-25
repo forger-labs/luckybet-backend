@@ -1,12 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 import {
 	apiResponseSchema,
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
 import { ChestPeriodType } from '../enums';
-import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
 
 export const validationChestMessages = {
 	title: {
