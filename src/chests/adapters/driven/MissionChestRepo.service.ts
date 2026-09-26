@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, ILike, MoreThanOrEqual, Repository } from 'typeorm';
+import { LessThanOrEqual } from 'typeorm/browser';
 
 import type { ChestBasic, FilterChestDTO } from '../../app/dto/chest.schema';
 import { MissionChest } from '../../app/entities/mission-chest.entity';
-import type { ChestPeriodType } from '../../app/enums';
 import type {
 	CreateChestInput,
 	ForDatabaseChests,
@@ -40,11 +40,58 @@ export class MissionChestRepoService implements ForDatabaseChests {
 		if (params.periodType !== undefined) where.periodType = params.periodType;
 		if (params.isActive !== undefined) where.isActive = params.isActive;
 
+		if (params.maxCoins !== undefined && params.minCoins !== undefined) {
+			where.coinsAmount = Between(params.minCoins, params.maxCoins);
+		} else if (params.minCoins !== undefined) {
+			where.coinsAmount = MoreThanOrEqual(params.minCoins);
+		} else if (params.maxCoins !== undefined) {
+			where.coinsAmount = LessThanOrEqual(params.maxCoins);
+		}
+
+		if (
+			params.maxRequiredMissions !== undefined &&
+			params.minRequiredMissions !== undefined
+		) {
+			where.requiredMissions = Between(
+				params.minRequiredMissions,
+				params.maxRequiredMissions,
+			);
+		} else if (params.minRequiredMissions !== undefined) {
+			where.requiredMissions = MoreThanOrEqual(params.minRequiredMissions);
+		} else if (params.maxRequiredMissions !== undefined) {
+			where.requiredMissions = LessThanOrEqual(params.maxRequiredMissions);
+		}
+
+		if (params.title !== undefined && params.title) {
+			where.title = ILike(`%${params.title}%`);
+		}
+
+		if (params.roomId !== undefined && params.roomId > 0) {
+			where.roomId = params.roomId;
+		}
+
 		const [list, count] = await this.chestModel.findAndCount({
 			where,
 			take: params.take ?? 50,
 			skip: params.skip ?? 0,
 			order: { created_at: 'DESC' },
+			select: {
+				coinsAmount: true,
+				created_at: true,
+				description: true,
+				experiencePoints: true,
+				id: true,
+				imageUrl: true,
+				isActive: true,
+				periodType: true,
+				requiredMissions: true,
+				room: { bonus: true, id: true, name: true },
+				roomId: true,
+				title: true,
+			},
+			relations: {
+				room: true,
+			},
 		});
 
 		return [list.map(c => this.toBasic(c)), count];
@@ -64,6 +111,15 @@ export class MissionChestRepoService implements ForDatabaseChests {
 			isActive: chest.isActive,
 			createdAt: chest.created_at,
 			updatedAt: chest.updated_at,
+			...(chest.room
+				? {
+						room: {
+							bonus: chest.room.bonus,
+							id: chest.room.id,
+							name: chest.room.name,
+						},
+					}
+				: {}),
 		};
 	}
 }

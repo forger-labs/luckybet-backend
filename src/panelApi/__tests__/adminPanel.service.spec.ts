@@ -354,13 +354,13 @@ describe('AdminPanelService', () => {
 			expect(sweetBonanza.provider).toBe('Pragmatic Play');
 			expect(sweetBonanza.lastPlayedAt).toBe('2026-09-14 18:00:00');
 			expect(sweetBonanza.playCount).toBe(2);
-			expect(sweetBonanza.totalWagerInPeriod).toBe(500);
+			expect(sweetBonanza.totalBetInPeriod).toBe(500);
 
 			const gates = result.games[1];
 			expect(gates.gameId).toBe('gates_of_olympus');
 			expect(gates.imageUrl).toBe('https://cdn.cdnpin.com/resources/gates.png');
 			expect(gates.playCount).toBe(1);
-			expect(gates.totalWagerInPeriod).toBe(500);
+			expect(gates.totalBetInPeriod).toBe(500);
 
 			expect(mockCache.set).toHaveBeenCalledWith(
 				'luckybet:player:recent_games:8744343:7:10',

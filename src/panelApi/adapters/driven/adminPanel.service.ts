@@ -502,7 +502,7 @@ export class AdminPanelService implements ForAdminPanel {
 				if (!gameIdentifier) continue;
 
 				const rawId = String(gameIdentifier);
-				const betAmount = Number(item.bet) || 0;
+				const betAmount = Number(item.bet ?? item.wager) || 0;
 				const lastPlayedAt =
 					item.datetime ||
 					(item.date && item.time ? `${item.date} ${item.time}` : toDateStr);
@@ -519,8 +519,7 @@ export class AdminPanelService implements ForAdminPanel {
 					const existing = deduplicatedGames.get(rawId);
 					if (existing) {
 						existing.playCount = (existing.playCount || 1) + 1;
-						existing.totalBetInPeriod =
-							(existing.totalBetInPeriod || 0) + betAmount;
+						existing.totalBetInPeriod = (existing.totalBetInPeriod || 0) + betAmount;
 					}
 				}
 			}
@@ -565,8 +564,7 @@ export class AdminPanelService implements ForAdminPanel {
 					const existing = deduplicatedGames.get(rawId);
 					if (existing) {
 						existing.playCount = (existing.playCount || 1) + 1;
-						existing.totalBetInPeriod =
-							(existing.totalBetInPeriod || 0) + wagerAmount;
+						existing.totalBetInPeriod = (existing.totalBetInPeriod || 0) + wagerAmount;
 					}
 				}
 			}
@@ -594,7 +592,8 @@ export class AdminPanelService implements ForAdminPanel {
 					if (matched.title || matched.name) {
 						game.gameName = matched.title || matched.name || game.gameName;
 					}
-					const providerName = matched.label || (matched as { provider?: string }).provider;
+					const providerName =
+						matched.label || (matched as { provider?: string }).provider;
 					if (providerName) {
 						game.provider = providerName;
 					}
@@ -616,7 +615,7 @@ export class AdminPanelService implements ForAdminPanel {
 			totalUniqueGames: deduplicatedGames.size,
 		};
 
-		await this.cache.set(cacheKey, result, this.gameActivityTtl);
+		await this.cache.set(cacheKey, result, options?.ttl ?? this.gameActivityTtl);
 		return result;
 	}
 

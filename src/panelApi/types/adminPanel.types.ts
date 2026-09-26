@@ -110,7 +110,8 @@ export interface GetPlayedGamesOptions {
 	limit?: number;
 	provider?: string;
 	gameName?: string;
-	forceRefresh?: boolean;
+  forceRefresh?: boolean;
+	ttl?: number
 }
 
 export interface PlayerGameHistoryResult {
@@ -130,8 +131,8 @@ export interface LuckyBetHistorySessionItem {
 	date?: string;
 	time?: string;
 	wager?: number | string;
-  win?: number | string;
-  bet?  : string | number,
+	win?: number | string;
+	bet?: string | number;
 	session?: string;
 	[key: string]: unknown;
 }
@@ -148,6 +149,6 @@ export interface LuckyBetHistoryResponse {
 	history?: LuckyBetHistorySessionItem[];
 	dataList?: unknown[];
 	error?: string;
-  errorMessage?: string;
+	errorMessage?: string;
 	[key: string]: unknown;
 }

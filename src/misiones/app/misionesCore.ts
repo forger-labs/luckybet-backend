@@ -60,16 +60,22 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 	// ─── Admin: Mission CRUD ────────────────────────────────────
 
 	async createMission(data: CreateMissionMultipartDto): Promise<MissionWithSteps> {
-    const { image, ...missionData } = data;
+		const { image, ...missionData } = data;
 
-    for (const step of missionData.missionSteps) {
-      if (step.targetConfig?.gameId && step.targetConfig.provider) {
-        throw new BadRequestException("Escoge proveedor o juego pero no escojas los dos")
-      }
-      if (step.targetConfig?.gameId && step.targetConfig?.minUniqueGames !== undefined && step.targetConfig?.minUniqueGames > 1 ) {
-       throw new BadRequestException("Si escoges un juego y un minimo de juegos unicos, entonces el minimo no puede ser mayor 1 y no puede ser 0")
-      }
-    }
+		for (const step of missionData.missionSteps) {
+			if (step.targetConfig?.gameId && step.targetConfig.provider) {
+				throw new BadRequestException('Escoge proveedor o juego pero no escojas los dos');
+			}
+			if (
+				step.targetConfig?.gameId &&
+				step.targetConfig?.minUniqueGames !== undefined &&
+				step.targetConfig?.minUniqueGames > 1
+			) {
+				throw new BadRequestException(
+					'Si escoges un juego y un minimo de juegos unicos, entonces el minimo no puede ser mayor 1 y no puede ser 0',
+				);
+			}
+		}
 
 		const imageUrl = await this.storage.uploadImage(image, 'missions');
 		try {
@@ -341,18 +347,32 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			);
 		}
 
+		const now = Date.now();
+		const startedAt = um.startedAt ? new Date(um.startedAt).getTime() : now;
+		const days = Math.max(1, Math.ceil((now - startedAt) / (1000 * 60 * 60 * 24)));
+
 		const targetConfig = stepDef.targetConfig;
 		const history = await this.panelApi.getLastPlayedGames(playerId, {
 			provider: targetConfig?.provider,
 			gameName: targetConfig?.gameId,
-			token,
+			days,
+      token,
+      ttl : 150
 		});
 
-		const minUniqueGames = targetConfig?.gameId ? 1 : targetConfig?.minUniqueGames ?? 1;
+		const requiredUniqueGames = targetConfig?.gameId
+			? 1
+			: (targetConfig?.minUniqueGames ?? 1);
+		const minBet = targetConfig?.minBet ?? 0;
 
-		if (history.totalUniqueGames < minUniqueGames) {
+		// Cada juego en history.games debe cumplir con la apuesta mínima requerida (totalBetInPeriod >= minBet)
+		const qualifyingGames = (history.games || []).filter(
+			g => (g.totalBetInPeriod ?? 0) >= minBet,
+		);
+
+		if (qualifyingGames.length < requiredUniqueGames) {
 			throw new BadRequestException(
-				`Aun no cumples el requisito: se requieren ${minUniqueGames} juego(s) y tienes ${history.totalUniqueGames}`,
+				`Aun no cumples el requisito: se requieren ${requiredUniqueGames} juego(s) con apuesta mínima de ${minBet} y tienes ${qualifyingGames.length}`,
 			);
 		}
 

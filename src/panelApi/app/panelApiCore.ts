@@ -337,15 +337,15 @@ export class PanelApiCore implements ForPanelApiCore {
 					}
 					if (matched.img) {
 						game.imageUrl = matched.img;
-          }
-          const bet = Number(matched.bet)
-          if (!Number.isNaN(bet)) {
-            if (game.totalBetInPeriod === undefined) {
-              game.totalBetInPeriod = bet
-            } else {
-              game.totalBetInPeriod += bet;
-            }
-         }
+					}
+					const bet = Number(matched.bet);
+					if (!Number.isNaN(bet)) {
+						if (game.totalBetInPeriod === undefined) {
+							game.totalBetInPeriod = bet;
+						} else {
+							game.totalBetInPeriod += bet;
+						}
+					}
 				}
 			}
 		}

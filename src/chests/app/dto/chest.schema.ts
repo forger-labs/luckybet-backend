@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { zBooleanQuery } from '@/src/shared/swagger/boolean.schema';
+import { BonusIntern } from '@/src/types/bonus';
 import {
 	apiResponseSchema,
 	paginatedResponseSchema,
@@ -97,6 +98,11 @@ export type ChestBasic = {
 	isActive: boolean;
 	createdAt?: Date;
 	updatedAt?: Date;
+	room?: {
+		name?: string;
+		id?: number;
+		bonus?: BonusIntern;
+	};
 };
 
 export const chestBasicSchema = z.object({

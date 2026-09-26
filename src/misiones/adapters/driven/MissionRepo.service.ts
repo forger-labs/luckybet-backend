@@ -161,12 +161,35 @@ export class MissionRepoService implements ForDatabaseMissions {
 	}
 
 	async updateMission(id: number, data: UpdateMissionData): Promise<MissionBasic | null> {
-		const mission = await this.missionModel.findOne({ where: { id } });
-		if (!mission) return null;
+		const { missionSteps, ...missionFields } = data;
 
-		Object.assign(mission, data);
-		const saved = await this.missionModel.save(mission);
-		return this.toBasic(saved);
+		return await this.missionModel.manager.transaction(async manager => {
+			const mission = await manager.findOne(Mission, { where: { id } });
+			if (!mission) return null;
+
+			Object.assign(mission, missionFields);
+			const saved = await manager.save(Mission, mission);
+
+			if (missionSteps !== undefined) {
+				await manager.delete(MissionStep, { missionId: id });
+				if (missionSteps.length > 0) {
+					await manager.save(
+						MissionStep,
+						missionSteps.map(step =>
+							manager.create(MissionStep, {
+								missionId: id,
+								stepOrder: step.stepOrder,
+								type: step.type,
+								content: step.content,
+								targetConfig: step.targetConfig,
+							}),
+						),
+					);
+				}
+			}
+
+			return this.toBasic(saved);
+		});
 	}
 
 	async activateMission(id: number): Promise<MissionBasic> {

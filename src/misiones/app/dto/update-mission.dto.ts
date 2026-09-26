@@ -2,7 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import * as z from 'zod';
 
 import { MissionStatus, MissionType } from '../enums';
-import { validationMissionMessages } from './mission.schema';
+import { createMissionStepSchema, validationMissionMessages } from './mission.schema';
 
 export const updateMissionSchema = z.object({
 	title: z
@@ -41,11 +41,11 @@ export const updateMissionSchema = z.object({
 		.min(0, validationMissionMessages.experiencePoints.min)
 		.optional()
 		.describe(validationMissionMessages.experiencePoints.describe),
-	imageUrl: z
-		.url(validationMissionMessages.imageUrl.url)
-		.max(500, validationMissionMessages.imageUrl.max)
+	missionSteps: z
+		.array(createMissionStepSchema)
+		.max(50, validationMissionMessages.missionSteps.max)
 		.optional()
-		.describe(validationMissionMessages.imageUrl.describe),
+		.describe(validationMissionMessages.missionSteps.describe),
 });
 
 export class UpdateMissionDto extends createZodDto(updateMissionSchema) {}

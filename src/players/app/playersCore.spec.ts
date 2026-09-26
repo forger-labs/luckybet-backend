@@ -56,8 +56,8 @@ describe('PlayersCore', () => {
 		panelApiCoreMock = {
 			authenticatePlayer: jest.fn(),
 			syncOrRegisterPlayer: jest.fn(),
-      creditPlayer: jest.fn(),
-      getGameList: jest.fn(),
+			creditPlayer: jest.fn(),
+			getGameList: jest.fn(),
 			getProviders: jest.fn(),
 			debitPlayer: jest.fn(),
 			getLastPlayedGame: jest.fn(),
@@ -200,7 +200,7 @@ describe('PlayersCore', () => {
 						imageUrl: 'https://cdn.cdnpin.com/resources/sweet.png',
 						lastPlayedAt: '2026-09-21 14:00:00',
 						playCount: 3,
-						totalWagerInPeriod: 600,
+						totalBetInPeriod: 600,
 					},
 				],
 			};

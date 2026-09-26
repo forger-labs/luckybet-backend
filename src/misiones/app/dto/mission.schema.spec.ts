@@ -262,4 +262,55 @@ describe('submitStepMultipartSchema (Zod)', () => {
 		const result = submitStepMultipartSchema.safeParse({});
 		expect(result.success).toBe(true);
 	});
+	describe('targetConfig validaciones estrictas (GAME_PLAY)', () => {
+		it('debería rechazar si se especifican provider y gameId simultáneamente', () => {
+			const result = createMissionStepSchema.safeParse({
+				stepOrder: 1,
+				type: 'GAME_PLAY',
+				targetConfig: {
+					provider: 'Pragmatic Play',
+					gameId: 'sweet_bonanza',
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it('debería rechazar si se especifica gameId y minUniqueGames es mayor a 1', () => {
+			const result = createMissionStepSchema.safeParse({
+				stepOrder: 1,
+				type: 'GAME_PLAY',
+				targetConfig: {
+					gameId: 'sweet_bonanza',
+					minUniqueGames: 2,
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it('debería aceptar gameId con minUniqueGames = 1', () => {
+			const result = createMissionStepSchema.safeParse({
+				stepOrder: 1,
+				type: 'GAME_PLAY',
+				targetConfig: {
+					gameId: 'sweet_bonanza',
+					minUniqueGames: 1,
+					minBet: 10,
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it('debería aceptar provider con minUniqueGames > 1', () => {
+			const result = createMissionStepSchema.safeParse({
+				stepOrder: 1,
+				type: 'GAME_PLAY',
+				targetConfig: {
+					provider: 'Pragmatic Play',
+					minUniqueGames: 3,
+					minBet: 5,
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+	});
 });

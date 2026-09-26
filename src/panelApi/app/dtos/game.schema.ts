@@ -15,7 +15,7 @@ export const LuckyBetGameItemSchema = z.looseObject({
 	category: z.string().optional(),
 	type: z.string().optional(),
 	bonus: z.string().optional(),
-  label: z.string().optional(),
+	label: z.string().optional(),
 	bet: z.number().optional(),
 });
 

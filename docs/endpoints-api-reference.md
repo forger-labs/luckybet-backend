@@ -742,7 +742,12 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 ##### `POST /api/v1.0/missions/user-missions/:userMissionId/steps/:stepId/verify`
-- **Propósito**: Verifica automáticamente un paso `GAME_PLAY` cruzando las partidas del jugador en LuckyBet contra los criterios de `targetConfig`.
+- **Propósito**: Verifica automáticamente un paso `GAME_PLAY` consultando el historial de juego del usuario en LuckyBet.
+- **Reglas de Validación**:
+  1. Calcula la ventana de tiempo en días transcurridos desde que el jugador inició la misión (`userMission.startedAt`).
+  2. Determina los juegos únicos requeridos (`requiredUniqueGames`): si se fijó un `gameId`, la meta es estrictamente **1**; si se fijó un `provider`, la meta es `targetConfig.minUniqueGames ?? 1`.
+  3. Comprueba que cada juego único califique con la apuesta mínima requerida (`totalBetInPeriod >= minBet`).
+  4. Si `qualifyingGames.length < requiredUniqueGames`, rechaza la verificación explicando cuántos juegos calificaron y cuántos faltan.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
 - **Parámetros de Ruta**: `userMissionId` (integer), `stepId` (integer).
@@ -851,21 +856,35 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 - **Respuesta (`200 OK`)**: Retorna el paso evaluado en `data`.
 
 ##### `PATCH /api/v1.0/missions/:id`
+- **Propósito**: Actualiza la configuración de una misión y/o reemplaza atómicamente sus pasos. Solo permitido si la misión se encuentra en estado `INACTIVE`. (Las imágenes se modifican exclusivamente en los endpoints dedicados de imagen).
 - **Tipo de Contenido**: `application/json`
-- **Autenticación**: **Admin JWT**.
+- **Autenticación**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Parámetros de Ruta**: `id` (integer).
 - **Body de Entrada (JSON)**:
   ```json
   {
-    "title": "Nuevo título",       // opcional
-    "description": "Nueva desc",   // opcional
-    "type": "WEEKLY",              // opcional
-    "status": "INACTIVE",          // opcional
-    "coinsAmount": 300,            // opcional
-    "roomId": 2,                   // opcional, nullable
-    "experiencePoints": 80,        // opcional
-    "imageUrl": "https://..."      // opcional
+    "title": "Misión actualizada",       // string, opcional
+    "description": "Nueva descripción",  // string, opcional
+    "type": "WEEKLY",                    // enum: "DAILY"|"WEEKLY"|"FIXED", opcional
+    "status": "INACTIVE",                // enum: "INACTIVE"|"ACTIVE"|"COMPLETED"|"CANCELLED", opcional
+    "coinsAmount": 350,                  // number, opcional
+    "roomId": 2,                         // number, opcional, nullable
+    "experiencePoints": 120,             // number, opcional
+    "missionSteps": [                    // array de pasos, opcional (reemplaza todos los pasos de forma atómica)
+      {
+        "stepOrder": 1,
+        "type": "GAME_PLAY",             // "IMAGE" | "TEXT" | "GAME_PLAY"
+        "content": "Juega al menos a 2 juegos distintos de Pragmatic",
+        "targetConfig": {
+          "provider": "Pragmatic Play",
+          "minUniqueGames": 2,
+          "minBet": 5
+        }
+      }
+    ]
   }
   ```
+- **Respuesta (`200 OK`)**: Retorna la plantilla de misión actualizada en `data`.
 
 ##### `POST /api/v1.0/missions/:id/activate`
 - **Propósito**: Activa una misión en estado `INACTIVE`. Fija automáticamente fecha de expiración según el tipo (`DAILY`: 24h, `WEEKLY`: 7 días).
