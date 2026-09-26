@@ -17,7 +17,7 @@ import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms
 import type { ForManageRewards } from '../ports/driven/ForManageRewards';
 import type { ForDatabaseMissionRewards } from '../ports/driver/ForDatabaseMissionRewards';
 import { FOR_DATABASE_MISSION_REWARDS } from './constants';
-import type { MissionRewardBasic } from './dto/reward.schema';
+import type { MissionRewardBasic, RewardFilter } from './dto/reward.schema';
 import { RewardAction, RewardStatus } from './enums';
 
 @Injectable()
@@ -200,22 +200,36 @@ export class RewardsCore implements ForManageRewards {
 		});
 	}
 
-	async getPendingRewards(playerId: number): Promise<MissionRewardBasic[]> {
-		return await this.rewardRepo.findPendingByPlayer(playerId);
-	}
-
-	async getUncertainRewards(params?: { take?: number; skip?: number }): Promise<{
+	async listPlayerRewards(
+		playerId: number,
+		filter?: RewardFilter,
+	): Promise<{
 		rewards: MissionRewardBasic[];
 		total: number;
 		limit: number;
 		skip: number;
 	}> {
-		const [rewards, total] = await this.rewardRepo.findUncertainRewards(params);
+		const [rewards, total] = await this.rewardRepo.getRewards(filter, playerId);
 		return {
 			rewards,
 			total,
-			limit: params?.take ?? 50,
-			skip: params?.skip ?? 0,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
+		};
+	}
+
+	async listAllRewards(filter?: RewardFilter): Promise<{
+		rewards: MissionRewardBasic[];
+		total: number;
+		limit: number;
+		skip: number;
+	}> {
+		const [rewards, total] = await this.rewardRepo.getRewards(filter);
+		return {
+			rewards,
+			total,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		};
 	}
 

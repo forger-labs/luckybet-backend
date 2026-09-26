@@ -3,6 +3,7 @@ import type {
 	ReviewQueueByPlayer,
 	StepSubmission,
 	UserMissionBasic,
+	UserMissionFilter,
 	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
 import { StepStatus } from '../../app/enums';
@@ -50,7 +51,7 @@ export interface ForManagePlayerMissions {
 
 	getPlayerMissions(
 		playerId: number,
-		params: { take?: number; skip?: number },
+		filter?: UserMissionFilter,
 	): Promise<{
 		missions: UserMissionBasic[];
 		total: number;

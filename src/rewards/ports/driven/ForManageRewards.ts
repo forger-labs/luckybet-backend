@@ -1,4 +1,4 @@
-import type { MissionRewardBasic } from '../../app/dto/reward.schema';
+import type { MissionRewardBasic, RewardFilter } from '../../app/dto/reward.schema';
 import type { RewardAction } from '../../app/enums';
 
 export interface ForManageRewards {
@@ -12,9 +12,17 @@ export interface ForManageRewards {
 
 	claimReward(userMissionId: number, playerId: number): Promise<MissionRewardBasic>;
 
-	getPendingRewards(playerId: number): Promise<MissionRewardBasic[]>;
+	listPlayerRewards(
+		playerId: number,
+		filter?: RewardFilter,
+	): Promise<{
+		rewards: MissionRewardBasic[];
+		total: number;
+		limit: number;
+		skip: number;
+	}>;
 
-	getUncertainRewards(params?: { take?: number; skip?: number }): Promise<{
+	listAllRewards(filter?: RewardFilter): Promise<{
 		rewards: MissionRewardBasic[];
 		total: number;
 		limit: number;

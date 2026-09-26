@@ -605,10 +605,21 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 #### A. Endpoints para Jugadores (Frontend Cliente)
 
 ##### `GET /api/v1.0/missions`
-- **Propósito**: Catálogo de misiones disponibles para los jugadores.
+- **Propósito**: Catálogo filtrado y paginado de misiones con ordenamiento cronológico.
 - **Tipo de Contenido**: Sin cuerpo.
-- **Autenticación / Token**: Pública o con Player Token.
-- **Query Params**: `take` (default 100), `skip` (default 0).
+- **Autenticación / Token**: Pública o con Player Token / Cookie Admin.
+- **Query Params**:
+  - `title` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas (`ILike`).
+  - `type` *(enum: `"DAILY"` | `"WEEKLY"` | `"FIXED"`, opcional)*: Tipo de misión.
+  - `status` *(enum: `"INACTIVE"` | `"ACTIVE"` | `"COMPLETED"` | `"CANCELLED"`, opcional)*: Estado de la misión.
+  - `roomId` *(number, opcional)*: Filtrar por sala promocional asignada.
+  - `minCoins` *(number, opcional)*: Monedas mínimas (`>=`).
+  - `maxCoins` *(number, opcional)*: Monedas máximas (`<=`).
+  - `minExperience` *(number, opcional)*: Puntos de exp mínimos (`>=`).
+  - `maxExperience` *(number, opcional)*: Puntos de exp máximos (`<=`).
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*: Orden por fecha de creación (`created_at`).
+  - `take` *(number, default: 50, max: 100)*: Cantidad de registros por página.
+  - `skip` *(number, default: 0)*: Offset de paginación.
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -619,7 +630,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
         "id": 1,
         "title": "Gana 5 rondas en Pragmatic",
         "description": "Juega al menos 5 rondas con apuesta mínima de 1 USD",
-        "type": "DAILY", // "DAILY" | "WEEKLY" | "FIXED"
+        "type": "DAILY",
         "status": "ACTIVE",
         "coinsAmount": 200,
         "experiencePoints": 50,
@@ -632,7 +643,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
             "id": 10,
             "missionId": 1,
             "stepOrder": 1,
-            "type": "GAME_PLAY", // "IMAGE" | "TEXT" | "GAME_PLAY"
+            "type": "GAME_PLAY",
             "content": "Juega al menos 5 rondas",
             "targetConfig": {
               "provider": "Pragmatic Play",
@@ -643,7 +654,14 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
         ]
       }
     ],
-    "meta": { "total": 1, "totalPages": 1, "page": 1, "limit": 100, "hasPreviousPage": false, "hasNextPage": false }
+    "meta": {
+      "total": 1,
+      "totalPages": 1,
+      "page": 1,
+      "limit": 50,
+      "hasPreviousPage": false,
+      "hasNextPage": false
+    }
   }
   ```
 
@@ -835,27 +853,39 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 ### 2.8 Módulo: `Rewards` (`/api/v1.0/rewards`)
 
-#### `GET /api/v1.0/rewards/my-pending`
-- **Propósito**: Lista las recompensas de misiones completadas que están pendientes por ser cobradas por el jugador autenticado.
+#### `GET /api/v1.0/rewards`
+- **Propósito**: Historial y recompensas de misiones del jugador autenticado. Permite consultar pendientes pasando `?status=PENDING`, filtrar por misión y ordenar cronológicamente.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
+- **Query Params**:
+  - `status` *(enum: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`, opcional)*
+  - `userMissionId` *(number, opcional)*: Filtrar por ID de misión de usuario.
+  - `orderBy` *(enum: `"created_at"` | `"id"`, default: `"created_at"`)*
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*
+  - `take` *(number, default: 50, max: 100)*: Registros por página.
+  - `skip` *(number, default: 0)*: Offset.
 - **Respuesta (`200 OK`)**:
   ```json
   {
     "status": true,
-    "message": "Recompensas pendientes obtenidas exitosamente",
+    "message": "Recompensas obtenidas exitosamente",
     "data": [
       {
         "id": 8,
         "userMissionId": 15,
         "playerId": 10,
         "coinsAmount": 500,
-        "experiencePoints": 100,
         "roomId": 3,
-        "status": "PENDING", // "PENDING" | "PROCESSING" | "CLAIMED" | "TIMEOUT_UNCERTAIN"
-        "claimedAt": null
+        "experiencePoints": 100,
+        "status": "PENDING",
+        "externalOperationId": null,
+        "errorMessage": null,
+        "resolvedByAdminId": null,
+        "claimedAt": null,
+        "createdAt": "2026-09-24T12:00:00.000Z"
       }
-    ]
+    ],
+    "meta": { "total": 1, "totalPages": 1, "page": 1, "limit": 50, "hasPreviousPage": false, "hasNextPage": false }
   }
   ```
 
@@ -890,10 +920,26 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   }
   ```
 
-#### `GET /api/v1.0/rewards/admin/uncertain` y `POST /api/v1.0/rewards/admin/:rewardId/resolve`
-- **Propósito**: Auditoría administrativa de reclamos dudosos.
-- **Autenticación**: **Admin JWT** (Cookie `accessToken`, rol `SUPER_ADMIN`).
-- **Body para Resolve (`application/json`)**:
+#### `GET /api/v1.0/rewards/admin`
+- **Propósito**: Listado general administrativo de todas las recompensas de misiones con filtros completos. Para consultar reclamos en estado incierto, pasar `?status=TIMEOUT_UNCERTAIN`.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `status` *(enum, opcional)*: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`.
+  - `playerId` *(number, opcional)*: Filtrar por jugador.
+  - `userMissionId` *(number, opcional)*: Filtrar por misión.
+  - `orderBy` *(enum: `"created_at"` | `"id"`, default: `"created_at"`)*.
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*.
+  - `take` *(number, default: 50, max: 100)*.
+  - `skip` *(number, default: 0)*.
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado con `meta`.
+
+#### `POST /api/v1.0/rewards/admin/:rewardId/resolve`
+- **Propósito**: Resuelve administrativamente un reclamo incierto (`RESOLVE_CLAIMED` o `FORCE_RETRY`).
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
+- **Parámetros de Ruta**: `rewardId` (integer).
+- **Body de Entrada (JSON)**:
   ```json
   {
     "action": "RESOLVE_CLAIMED", // "RESOLVE_CLAIMED" | "FORCE_RETRY"
@@ -901,6 +947,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
     "adminNotes": "Confirmado en reporte diario de LuckyBet" // opcional
   }
   ```
+- **Respuesta (`200 OK`)**: Retorna la recompensa resuelta en `data`.
 
 ---
 
@@ -943,9 +990,12 @@ Catálogo administrativo de cofres semanales y mensuales.
 ### 2.10 Módulo: `PlayerChests` (`/api/v1.0/player-chests`)
 
 #### `GET /api/v1.0/player-chests/progress`
-- **Propósito**: Calcula el progreso en vivo de **todos los cofres activos** en el periodo vigente (semana o mes actual) para el jugador autenticado.
+- **Propósito**: Calcula el progreso en vivo de los cofres activos para el jugador autenticado, optimizado por filtros de periodo o cofre individual.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
+- **Query Params**:
+  - `periodType` *(enum: `"WEEKLY"` | `"MONTHLY"`, opcional)*: Permite limitar el cálculo al tipo de periodo necesario.
+  - `chestId` *(number, opcional)*: Calcula exclusivamente el progreso para un cofre específico.
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -1083,9 +1133,35 @@ Catálogo administrativo de cofres semanales y mensuales.
   ```
 
 #### Endpoints Administrativos de Cofres de Jugadores
-- `GET /api/v1.0/player-chests/admin/uncertain`: Lista reclamos inciertos de cofres.
-- `POST /api/v1.0/player-chests/admin/:claimId/resolve`:
-  - `Body`: `{ "action": "RESOLVE_CLAIMED" | "FORCE_RETRY", "externalOperationId?": string, "adminNotes?": string }`.
+
+##### `GET /api/v1.0/player-chests/admin`
+- **Propósito**: Listado general de reclamos y participaciones de cofres para administradores con soporte de filtros. Para ver reclamos inciertos, pasar `?status=TIMEOUT_UNCERTAIN`.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `playerId` *(number, opcional)*
+  - `chestId` *(number, opcional)*
+  - `status` *(enum, opcional)*: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`
+  - `periodKey` *(string, opcional)*: Ej: `"2026-W39"`
+  - `orderBy` *(enum: `"created_at"` | `"periodKey"` | `"id"`, default: `"created_at"`)*
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*
+  - `take` *(number, default: 50, max: 100)*
+  - `skip` *(number, default: 0)*
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado de `userMissionChestSchema` con `meta`.
+
+##### `POST /api/v1.0/player-chests/admin/:claimId/resolve`
+- **Propósito**: Resuelve administrativamente un reclamo incierto de cofre.
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT** (rol `SUPER_ADMIN`).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "action": "RESOLVE_CLAIMED", // "RESOLVE_CLAIMED" | "FORCE_RETRY"
+    "externalOperationId": "op_9921", // opcional
+    "adminNotes": "Acreditado manualmente en panel LuckyBet" // opcional
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna el reclamo de cofre resuelto en `data`.
 
 ---
 
@@ -1169,9 +1245,35 @@ Catálogo administrativo de cofres semanales y mensuales.
   ```
 
 #### Endpoints Administrativos de Recompensas de Nivel
-- `GET /api/v1.0/level-rewards/admin/uncertain`: Lista reclamos inciertos de nivel.
-- `POST /api/v1.0/level-rewards/admin/:claimId/resolve`:
-  - `Body`: `{ "action": "RESOLVE_CLAIMED" | "FORCE_RETRY", "externalOperationId?": string, "adminNotes?": string }`.
+
+##### `GET /api/v1.0/level-rewards/admin`
+- **Propósito**: Listado general de recompensas de nivel para administradores con soporte de filtros. Para consultar reclamos en estado incierto, pasar `?status=TIMEOUT_UNCERTAIN`.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `playerId` *(number, opcional)*
+  - `levelId` *(number, opcional)*
+  - `status` *(enum, opcional)*: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`
+  - `orderBy` *(enum: `"created_at"` | `"levelId"` | `"id"`, default: `"created_at"`)*
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*
+  - `take` *(number, default: 50, max: 100)*
+  - `skip` *(number, default: 0)*
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado de `levelRewardBasicSchema` con `meta`.
+
+##### `POST /api/v1.0/level-rewards/admin/:claimId/resolve`
+- **Propósito**: Resuelve un reclamo de nivel incierto (`RESOLVE_CLAIMED` o `FORCE_RETRY`).
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT** (rol `SUPER_ADMIN`).
+- **Parámetros de Ruta**: `claimId` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "action": "RESOLVE_CLAIMED", // "RESOLVE_CLAIMED" | "FORCE_RETRY"
+    "externalOperationId": "op_lvl_771", // opcional
+    "adminNotes": "Fichas acreditadas tras verificación" // opcional
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna el reclamo de nivel resuelto en `data`.
 
 ---
 

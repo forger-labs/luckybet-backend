@@ -30,7 +30,9 @@ import {
 	MissionRewardListResponseDto,
 	MissionRewardResponseDto,
 	ResolveUncertainRewardDto,
+	RewardFilterDto,
 } from '../../app/dto/reward.schema';
+import { RewardStatus } from '../../app/enums';
 import type { ForManageRewards } from '../../ports/driven/ForManageRewards';
 
 @Controller('rewards')
@@ -59,7 +61,7 @@ export class RewardsController {
 		return buildResponse(result, 'Recompensa reclamada exitosamente', true);
 	}
 
-	@Get('my-pending')
+	@Get()
 	@UseGuards(PlayerTokenGuard)
 	@HttpCode(HttpStatus.OK)
 	@ApiHeader({
@@ -68,29 +70,45 @@ export class RewardsController {
 		required: true,
 	})
 	@ApiOkResponse({ type: MissionRewardListResponseDto })
-	async getPendingRewards(@CurrentPlayer() player: PlayerAuthContext) {
-		const rewards = await this.rewardsCore.getPendingRewards(player.id);
-		return buildResponse(rewards, 'Recompensas pendientes obtenidas exitosamente', true);
+	@ApiQuery({ name: 'status', required: false, enum: RewardStatus })
+	@ApiQuery({ name: 'userMissionId', required: false, type: Number })
+	@ApiQuery({ name: 'orderBy', required: false, enum: ['created_at', 'id'] })
+	@ApiQuery({ name: 'orderDirection', required: false, enum: ['ASC', 'DESC'] })
+	@ApiQuery({ name: 'take', required: false, type: Number })
+	@ApiQuery({ name: 'skip', required: false, type: Number })
+	async listPlayerRewards(
+		@CurrentPlayer() player: PlayerAuthContext,
+		@Query() filter: RewardFilterDto,
+	) {
+		const result = await this.rewardsCore.listPlayerRewards(player.id, filter);
+		return buildPaginatedResponse(
+			result.rewards,
+			'Recompensas obtenidas exitosamente',
+			true,
+			{ limit: result.limit, skip: result.skip, total: result.total },
+		);
 	}
 
 	// ─── Admin Endpoints ───────────────────────────────────────────
 
-	@Get('admin/uncertain')
+	@Get('admin')
 	@UseGuards(JwtGuard, RolesGuard)
 	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@ApiCookieAuth()
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionRewardListResponseDto })
+	@ApiQuery({ name: 'status', required: false, enum: RewardStatus })
+	@ApiQuery({ name: 'playerId', required: false, type: Number })
+	@ApiQuery({ name: 'userMissionId', required: false, type: Number })
+	@ApiQuery({ name: 'orderBy', required: false, enum: ['created_at', 'id'] })
+	@ApiQuery({ name: 'orderDirection', required: false, enum: ['ASC', 'DESC'] })
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
-	async getUncertainRewards(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
-		const result = await this.rewardsCore.getUncertainRewards({ take, skip });
+	async listAdminRewards(@Query() filter: RewardFilterDto) {
+		const result = await this.rewardsCore.listAllRewards(filter);
 		return buildPaginatedResponse(
 			result.rewards,
-			'Recompensas en estado incierto obtenidas exitosamente',
+			'Recompensas obtenidas exitosamente',
 			true,
 			{ limit: result.limit, skip: result.skip, total: result.total },
 		);

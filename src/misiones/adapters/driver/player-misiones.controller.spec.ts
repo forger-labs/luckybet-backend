@@ -151,7 +151,10 @@ describe('PlayerMisionesController', () => {
 				skip: 0,
 			});
 
-			const result = await controller.getPlayerMissions(mockPlayer, 10, 0);
+			const result = await controller.getPlayerMissions(mockPlayer, {
+				take: 10,
+				skip: 0,
+			});
 
 			expect(mockCore.getPlayerMissions).toHaveBeenCalledWith(10, { take: 10, skip: 0 });
 			expect(result.data).toEqual([mockUserMission]);

@@ -117,7 +117,7 @@ export const playerFilterSchema = z.object({
 		.describe('Filtrar por ID de sala'),
 	isActive: zBooleanQuery.optional().describe('Filtrar por estado activo/inactivo'),
 	orderDirection: z
-    .enum(SortOrder)
+		.enum(SortOrder)
 		.default(SortOrder.DESC)
 		.optional()
 		.describe('Orden por fecha de creación (ASC o DESC, por defecto DESC)'),

@@ -16,12 +16,12 @@ export class PanelController {
 	) {}
 
 	@Get('/games')
-	@UseGuards(PlayerTokenGuard)
+	// @UseGuards(PlayerTokenGuard)
 	@ApiOkResponse({
 		type: LuckyBetGameItemResponseDTO,
 	})
 	async gameList(@CurrentToken() token: string) {
-		const gameList = await this.userPanel.getGameList(token);
+		const gameList = await this.userPanel.getGameList('');
 
 		return buildResponse(gameList, 'Lista de juegos obtenida', true);
 	}

@@ -21,10 +21,12 @@ import type { ForDatabaseUserMissions } from '../ports/driver/ForDatabaseUserMis
 import type { CreateMissionMultipartDto } from './dto/create-mission.dto';
 import type {
 	MissionBasic,
+	MissionFilter,
 	MissionWithSteps,
 	ReviewQueueByPlayer,
 	StepSubmission,
 	UserMissionBasic,
+	UserMissionFilter,
 	UserMissionWithSteps,
 } from './dto/mission.schema';
 import type { UpdateMissionDto } from './dto/update-mission.dto';
@@ -131,21 +133,21 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		return mission;
 	}
 
-	async listMissions(params: { take?: number; skip?: number }): Promise<{
+	async listMissions(filter?: MissionFilter): Promise<{
 		missions: MissionWithSteps[];
 		total: number;
 		limit: number;
 		skip: number;
 	}> {
-		const [missions, total] = await this.missionRepo.getMissions(params);
+		const [missions, total] = await this.missionRepo.getMissions(filter);
 		return {
 			missions: missions.map(m => ({
 				...m,
 				imageUrl: this.toPublicUrl(m.imageUrl),
 			})),
 			total,
-			limit: params.take ?? 100,
-			skip: params.skip ?? 0,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		};
 	}
 
@@ -441,19 +443,19 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 
 	async getPlayerMissions(
 		playerId: number,
-		params: { take?: number; skip?: number },
+		filter?: UserMissionFilter,
 	): Promise<{
 		missions: UserMissionBasic[];
 		total: number;
 		limit: number;
 		skip: number;
 	}> {
-		const [missions, total] = await this.userMissionRepo.findByPlayer(playerId, params);
+		const [missions, total] = await this.userMissionRepo.findByPlayer(playerId, filter);
 		return {
 			missions,
 			total,
-			limit: params.take ?? 100,
-			skip: params.skip ?? 0,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		};
 	}
 

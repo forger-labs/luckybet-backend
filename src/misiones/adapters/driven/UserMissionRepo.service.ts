@@ -5,8 +5,10 @@ import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import type {
 	StepSubmission,
 	UserMissionBasic,
+	UserMissionFilter,
 	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
+import { SortOrder } from '../../app/dto/mission.schema';
 import { UserMission } from '../../app/entities/user-mission.entity';
 import { UserMissionStatus } from '../../app/enums';
 import { ForDatabaseUserMissions } from '../../ports/driver/ForDatabaseUserMissions';
@@ -47,12 +49,24 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 
 	async findByPlayer(
 		playerId: number,
-		params: { take?: number; skip?: number },
+		filter?: UserMissionFilter,
 	): Promise<[UserMissionBasic[], number]> {
+		const where: FindOptionsWhere<UserMission> = { playerId };
+
+		if (filter?.status) {
+			where.status = filter.status as UserMissionStatus;
+		}
+		if (filter?.missionId !== undefined && filter?.missionId !== null) {
+			where.missionId = filter.missionId;
+		}
+
+		const orderDirection = filter?.orderDirection ?? SortOrder.DESC;
+
 		const [list, count] = await this.userMissionModel.findAndCount({
-			where: { playerId },
-			skip: params.skip,
-			take: params.take,
+			where,
+			skip: filter?.skip ?? 0,
+			take: filter?.take ?? 50,
+			order: { created_at: orderDirection },
 		});
 		return [list.map(um => this.toBasic(um)), count];
 	}

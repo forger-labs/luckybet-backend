@@ -91,23 +91,28 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 	}
 
 	async getPlayerChests(
-		playerId: number,
-		filter: PlayerChestFilter,
+		filter?: PlayerChestFilter,
+		overridePlayerId?: number,
 	): Promise<[UserMissionChestBasic[], number]> {
-		const where: FindOptionsWhere<UserMissionChest> = { playerId };
+		const where: FindOptionsWhere<UserMissionChest> = {};
+		if (overridePlayerId !== undefined) {
+			where.playerId = overridePlayerId;
+		} else if (filter?.playerId !== undefined && filter?.playerId !== null) {
+			where.playerId = filter.playerId;
+		}
 
-		if (filter.chestId) {
+		if (filter?.chestId) {
 			where.chestId = filter.chestId;
 		}
-		if (filter.status) {
+		if (filter?.status) {
 			where.status = filter.status;
 		}
-		if (filter.periodKey) {
+		if (filter?.periodKey) {
 			where.periodKey = filter.periodKey;
 		}
 
-		const orderField = filter.orderBy ?? PlayerChestSortField.CREATED_AT;
-		const orderDir = filter.orderDirection ?? SortOrder.DESC;
+		const orderField = filter?.orderBy ?? PlayerChestSortField.CREATED_AT;
+		const orderDir = filter?.orderDirection ?? SortOrder.DESC;
 		const order: FindOptionsOrder<UserMissionChest> = {
 			[orderField]: orderDir,
 		};
@@ -115,8 +120,8 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 		const [list, count] = await this.claimModel.findAndCount({
 			where,
 			order,
-			take: filter.take ?? 50,
-			skip: filter.skip ?? 0,
+			take: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		});
 
 		return [list.map(c => this.toBasic(c)), count];

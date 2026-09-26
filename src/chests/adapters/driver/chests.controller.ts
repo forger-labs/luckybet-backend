@@ -39,6 +39,7 @@ import {
 	ChestListResponseDto,
 	ChestResponseDto,
 	CreateChestDto,
+	FilterChestDTO,
 	UpdateChestDto,
 } from '../../app/dto/chest.schema';
 import { ChestPeriodType } from '../../app/enums';
@@ -61,18 +62,9 @@ export class ChestsController {
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	@ApiQuery({ name: 'periodType', required: false, enum: ChestPeriodType })
 	@ApiQuery({ name: 'isActive', required: false, type: Boolean })
-	async listChests(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-		@Query('periodType') periodType?: ChestPeriodType,
-		@Query('isActive') isActive?: boolean,
-	) {
-		const result = await this.chestsCore.listChests({
-			take,
-			skip,
-			periodType,
-			isActive,
-		});
+	@ApiQuery({ name: 'title', required: false, type: String })
+	async listChests(@Query() filter: FilterChestDTO) {
+		const result = await this.chestsCore.listChests(filter);
 		return buildPaginatedResponse(
 			result.chests,
 			'Listado de cofres obtenido exitosamente',

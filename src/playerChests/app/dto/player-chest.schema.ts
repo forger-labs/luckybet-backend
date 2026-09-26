@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { chestBasicSchema } from '../../../chests/app/dto/chest.schema';
+import { ChestPeriodType } from '../../../chests/app/enums';
 import { type RewardAction, RewardStatus } from '../../../rewards/app/enums';
 import {
 	apiResponseSchema,
@@ -70,7 +71,26 @@ export const userMissionChestSchema = z.object({
 	updatedAt: zDateHelper.optional(),
 });
 
+export const playerChestProgressFilterSchema = z.object({
+	periodType: z
+		.enum(ChestPeriodType)
+		.optional()
+		.describe('Filtrar por tipo de periodo: WEEKLY o MONTHLY'),
+	chestId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por cofre específico'),
+});
+
 export const playerChestFilterSchema = z.object({
+	playerId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por jugador (solo admin)'),
 	chestId: z.coerce.number().int().positive().optional().describe('Filtrar por cofre'),
 	status: z.enum(RewardStatus).optional().describe('Filtrar por estado del reclamo'),
 	periodKey: z
@@ -100,6 +120,7 @@ export const playerChestFilterSchema = z.object({
 export type PlayerChestProgress = z.infer<typeof playerChestProgressSchema>;
 export type UserMissionChestBasic = z.infer<typeof userMissionChestSchema>;
 export type PlayerChestFilter = z.infer<typeof playerChestFilterSchema>;
+export type PlayerChestProgressFilter = z.infer<typeof playerChestProgressFilterSchema>;
 
 export const SinglePlayerChestProgressResponseSchema = apiResponseSchema(
 	playerChestProgressSchema,
@@ -125,3 +146,6 @@ export class ResolveUncertainChestClaimDto extends createZodDto(
 	resolveUncertainChestClaimSchema,
 ) {}
 export class PlayerChestFilterDto extends createZodDto(playerChestFilterSchema) {}
+export class PlayerChestProgressFilterDto extends createZodDto(
+	playerChestProgressFilterSchema,
+) {}

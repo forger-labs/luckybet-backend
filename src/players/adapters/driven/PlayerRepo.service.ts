@@ -115,13 +115,13 @@ export class PlayerRepoService implements ForDatabasePlayers {
 					name: true,
 					minExperience: true,
 					id: true,
-        },
-        created_at: true,
-        room: {
-          bonus: true,
-          id: true,
-          name: true,
-				}
+				},
+				created_at: true,
+				room: {
+					bonus: true,
+					id: true,
+					name: true,
+				},
 			},
 			relations: {
 				level: true,
@@ -129,7 +129,7 @@ export class PlayerRepoService implements ForDatabasePlayers {
 			},
 		});
 
-    return [players.map(p => this.toModel(p)), count];
+		return [players.map(p => this.toModel(p)), count];
 	}
 
 	async addExperience(

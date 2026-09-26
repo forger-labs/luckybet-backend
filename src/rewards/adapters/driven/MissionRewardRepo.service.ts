@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsOrder, FindOptionsWhere, Repository } from 'typeorm';
 
-import type { MissionRewardBasic } from '../../app/dto/reward.schema';
+import {
+	type MissionRewardBasic,
+	RewardFilter,
+	RewardSortField,
+	SortOrder,
+} from '../../app/dto/reward.schema';
 import { MissionReward } from '../../app/entities/mission-reward.entity';
 import { RewardStatus } from '../../app/enums';
 import type {
@@ -43,7 +48,13 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			where: { userMissionId },
 			relations: { userMission: { mission: true } },
 		});
-		return reward ? this.toBasic(reward) : null;
+		if (!reward) return null;
+
+		const basic = this.toBasic(reward);
+		return {
+			...basic,
+			missionTitle: reward.userMission?.mission?.title,
+		};
 	}
 
 	async findById(id: number): Promise<MissionRewardBasic | null> {
@@ -54,29 +65,39 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 		return reward ? this.toBasic(reward) : null;
 	}
 
-	async findPendingByPlayer(playerId: number): Promise<MissionRewardBasic[]> {
-		const rewards = await this.rewardModel.find({
-			where: {
-				playerId,
-				status: RewardStatus.PENDING,
-			},
-			relations: { userMission: { mission: true } },
-			order: { created_at: 'DESC' },
-		});
-		return rewards.map(r => this.toBasic(r));
-	}
+	async getRewards(
+		filter?: RewardFilter,
+		overridePlayerId?: number,
+	): Promise<[MissionRewardBasic[], number]> {
+		const where: FindOptionsWhere<MissionReward> = {};
 
-	async findUncertainRewards(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[MissionRewardBasic[], number]> {
+		if (overridePlayerId !== undefined) {
+			where.playerId = overridePlayerId;
+		} else if (filter?.playerId !== undefined && filter?.playerId !== null) {
+			where.playerId = filter.playerId;
+		}
+
+		if (filter?.status) {
+			where.status = filter.status;
+		}
+		if (filter?.userMissionId !== undefined && filter?.userMissionId !== null) {
+			where.userMissionId = filter.userMissionId;
+		}
+
+		const orderField = filter?.orderBy ?? RewardSortField.CREATED_AT;
+		const orderDir = filter?.orderDirection ?? SortOrder.DESC;
+		const order: FindOptionsOrder<MissionReward> = {
+			[orderField]: orderDir,
+		};
+
 		const [rewards, count] = await this.rewardModel.findAndCount({
-			where: { status: RewardStatus.TIMEOUT_UNCERTAIN },
+			where,
 			relations: { userMission: { mission: true, player: true }, resolvedByAdmin: true },
-			order: { updated_at: 'DESC' },
-			take: params?.take ?? 50,
-			skip: params?.skip ?? 0,
+			order,
+			take: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		});
+
 		return [rewards.map(r => this.toBasic(r)), count];
 	}
 
@@ -137,7 +158,8 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			errorMessage: reward.errorMessage,
 			resolvedByAdminId: reward.resolvedByAdminId,
 			claimedAt: reward.claimedAt ? reward.claimedAt.toISOString() : null,
-			missionTitle: reward.userMission?.mission?.title,
+			createdAt: reward.created_at ? reward.created_at.toISOString() : undefined,
+			updatedAt: reward.updated_at ? reward.updated_at.toISOString() : undefined,
 		};
 	}
 }

@@ -32,7 +32,11 @@ import {
 } from '../../../shared/libs/buildResponse';
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
 import { SubmitStepMultipartDto } from '../../app/dto/create-mission.dto';
-import { StepResponseDto, UserMissionResponseDto } from '../../app/dto/mission.schema';
+import {
+	StepResponseDto,
+	UserMissionFilterDto,
+	UserMissionResponseDto,
+} from '../../app/dto/mission.schema';
 import type { ForManagePlayerMissions } from '../../ports/driven/ForManagePlayerMissions';
 
 @Controller('missions')
@@ -108,17 +112,25 @@ export class PlayerMisionesController {
 	@Get('my-missions')
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: UserMissionResponseDto })
+	@ApiQuery({
+		name: 'status',
+		required: false,
+		enum: ['IN_PROGRESS', 'COMPLETED', 'EXPIRED', 'CANCELLED'],
+	})
+	@ApiQuery({ name: 'missionId', required: false, type: Number })
+	@ApiQuery({
+		name: 'orderDirection',
+		required: false,
+		enum: ['ASC', 'DESC'],
+		description: 'Orden por fecha de creación (ASC o DESC)',
+	})
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	async getPlayerMissions(
 		@CurrentPlayer() player: PlayerAuthContext,
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+		@Query() filter: UserMissionFilterDto,
 	) {
-		const response = await this.misionesCore.getPlayerMissions(player.id, {
-			take,
-			skip,
-		});
+		const response = await this.misionesCore.getPlayerMissions(player.id, filter);
 		return buildPaginatedResponse(
 			response.missions,
 			'Misiones obtenidas exitosamente',

@@ -38,12 +38,7 @@ export interface ForDatabasePlayerChests {
 	): Promise<UserMissionChestBasic>;
 
 	getPlayerChests(
-		playerId: number,
-		filter: PlayerChestFilter,
+		filter?: PlayerChestFilter,
+		overridePlayerId?: number,
 	): Promise<[UserMissionChestBasic[], number]>;
-
-	findUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[UserMissionChestBasic[], number]>;
 }

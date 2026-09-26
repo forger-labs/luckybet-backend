@@ -119,3 +119,47 @@ export class CreateChestDto extends createZodDto(createChestSchema) {}
 export class UpdateChestDto extends createZodDto(updateChestSchema) {}
 export class ChestResponseDto extends createZodDto(ChestResponseSchema) {}
 export class ChestListResponseDto extends createZodDto(ChestListResponseSchema) {}
+
+export const chestFilterSchema = z.object({
+	take: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(100)
+		.default(50)
+		.describe('Cantidad de registros'),
+	skip: z.coerce.number().int().min(0).default(0).describe('Paginación / Offset'),
+	roomId: z.coerce.number().int().positive().optional().describe('Filtrar por sala'),
+	periodType: z
+		.enum(ChestPeriodType)
+		.optional()
+		.describe('Filtrar por periodo del cofre'),
+	title: z.string().optional().describe('Filtrar por titulo del cofre'),
+	isActive: zBooleanQuery.optional().describe('Filtrar por estado activo/inactivo'),
+	minRequiredMissions: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por minima cantidad de misiones'),
+	maxRequiredMissions: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por maxima cantidad de misiones'),
+	maxCoins: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por minimo premio de monedas'),
+	minCoins: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por maximo premio de monedas'),
+});
+
+export class FilterChestDTO extends createZodDto(chestFilterSchema) {}

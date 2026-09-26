@@ -145,14 +145,14 @@ export class UserPanelService implements ForUserPanel {
 		const cached = await this.cache.get<LuckyBetGameItem[]>(
 			LUCKYBET_GAME_CATALOG_CACHE_KEY,
 		);
-		if (cached && Array.isArray(cached) && cached.length > 0) {
-			return cached;
-		}
+		// if (cached && Array.isArray(cached) && cached.length > 0) {
+		// 	return cached;
+		// }
 
 		const response = await this.executeCommand<
 			LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
 		>('gameList', token ? { token } : {});
-
+console.log(response)
 		let games: LuckyBetGameItem[] = [];
 
 		if (response.status === 'success' && response.content) {

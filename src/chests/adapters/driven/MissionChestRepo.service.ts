@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 
-import type { ChestBasic } from '../../app/dto/chest.schema';
+import type { ChestBasic, FilterChestDTO } from '../../app/dto/chest.schema';
 import { MissionChest } from '../../app/entities/mission-chest.entity';
 import type { ChestPeriodType } from '../../app/enums';
 import type {
@@ -35,15 +35,12 @@ export class MissionChestRepoService implements ForDatabaseChests {
 		return updated ? this.toBasic(updated) : null;
 	}
 
-	async getChests(params: {
-		take?: number;
-		skip?: number;
-		periodType?: ChestPeriodType;
-		isActive?: boolean;
-	}): Promise<[ChestBasic[], number]> {
+  async getChests(params: FilterChestDTO): Promise<[ChestBasic[], number]> {
 		const where: FindOptionsWhere<MissionChest> = {};
 		if (params.periodType !== undefined) where.periodType = params.periodType;
-		if (params.isActive !== undefined) where.isActive = params.isActive;
+    if (params.isActive !== undefined) where.isActive = params.isActive;
+
+		
 
 		const [list, count] = await this.chestModel.findAndCount({
 			where,

@@ -1,4 +1,4 @@
-import type { ChestBasic } from '../../app/dto/chest.schema';
+import type { ChestBasic, FilterChestDTO } from '../../app/dto/chest.schema';
 import { ChestPeriodType } from '../../app/enums';
 
 export type CreateChestInput = {
@@ -22,10 +22,5 @@ export interface ForDatabaseChests {
 
 	updateChest(id: number, data: UpdateChestInput): Promise<ChestBasic | null>;
 
-	getChests(params: {
-		take?: number;
-		skip?: number;
-		periodType?: ChestPeriodType;
-		isActive?: boolean;
-	}): Promise<[ChestBasic[], number]>;
+	getChests(filter: FilterChestDTO): Promise<[ChestBasic[], number]>;
 }

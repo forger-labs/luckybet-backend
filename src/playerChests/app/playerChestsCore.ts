@@ -26,6 +26,7 @@ import {
 	ChestProgressState,
 	type PlayerChestFilter,
 	type PlayerChestProgress,
+	type PlayerChestProgressFilter,
 	type UserMissionChestBasic,
 } from './dto/player-chest.schema';
 
@@ -160,7 +161,7 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		limit: number;
 		skip: number;
 	}> {
-		const [claims, total] = await this.claimRepo.getPlayerChests(playerId, filter);
+		const [claims, total] = await this.claimRepo.getPlayerChests(filter, playerId);
 		return {
 			claims,
 			total,
@@ -172,9 +173,18 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 	/**
 	 * Obtiene el progreso de todos los cofres activos en el periodo actual.
 	 */
-	async getPlayerChestsProgress(playerId: number): Promise<PlayerChestProgress[]> {
+	async getPlayerChestsProgress(
+		playerId: number,
+		filter?: PlayerChestProgressFilter,
+	): Promise<PlayerChestProgress[]> {
+		if (filter?.chestId) {
+			const single = await this.getChestProgressById(filter.chestId, playerId);
+			return [single];
+		}
+
 		const { chests: activeChests } = await this.chestsCore.listChests({
 			isActive: true,
+			periodType: filter?.periodType,
 			skip: 0,
 			take: 100,
 		});
@@ -421,18 +431,18 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		});
 	}
 
-	async getUncertainClaims(params?: { take?: number; skip?: number }): Promise<{
+	async listAllChests(filter: PlayerChestFilter): Promise<{
 		claims: UserMissionChestBasic[];
 		total: number;
 		limit: number;
 		skip: number;
 	}> {
-		const [claims, total] = await this.claimRepo.findUncertainClaims(params);
+		const [claims, total] = await this.claimRepo.getPlayerChests(filter);
 		return {
 			claims,
 			total,
-			limit: params?.take ?? 50,
-			skip: params?.skip ?? 0,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		};
 	}
 

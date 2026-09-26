@@ -20,6 +20,7 @@ import { Roles } from '../../../auth/decorators/roles.decorator';
 import { CurrentPlayer } from '../../../panelApi/app/decorators/currentPlayer.decorator';
 import { PlayerTokenGuard } from '../../../panelApi/app/guards/playerToken.guard';
 import type { PlayerAuthContext } from '../../../panelApi/types/panelApiCore.types';
+import { RewardStatus } from '../../../rewards/app/enums';
 import {
 	buildPaginatedResponse,
 	buildResponse,
@@ -52,6 +53,12 @@ export class LevelRewardsController {
 		required: true,
 	})
 	@ApiOkResponse({ type: LevelRewardListResponseDto })
+	@ApiQuery({ name: 'status', required: false, enum: RewardStatus })
+	@ApiQuery({ name: 'levelId', required: false, type: Number })
+	@ApiQuery({ name: 'orderBy', required: false, enum: ['created_at', 'levelId', 'id'] })
+	@ApiQuery({ name: 'orderDirection', required: false, enum: ['ASC', 'DESC'] })
+	@ApiQuery({ name: 'take', required: false, type: Number })
+	@ApiQuery({ name: 'skip', required: false, type: Number })
 	async listPlayerRewards(
 		@CurrentPlayer() player: PlayerAuthContext,
 		@Query() filter: LevelRewardFilterDto,
@@ -87,27 +94,29 @@ export class LevelRewardsController {
 
 	// ─── Admin Endpoints ───────────────────────────────────────────
 
-	@Get('admin/uncertain')
+	@Get('admin')
 	@UseGuards(JwtGuard, RolesGuard)
 	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@ApiCookieAuth()
 	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: LevelRewardListResponseDto })
+	@ApiQuery({ name: 'playerId', required: false, type: Number })
+	@ApiQuery({ name: 'levelId', required: false, type: Number })
+	@ApiQuery({ name: 'status', required: false, enum: RewardStatus })
+	@ApiQuery({ name: 'orderBy', required: false, enum: ['created_at', 'levelId', 'id'] })
+	@ApiQuery({ name: 'orderDirection', required: false, enum: ['ASC', 'DESC'] })
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
-	@ApiOkResponse({ type: LevelRewardListResponseDto })
-	async getUncertainClaims(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
+	async listAdminRewards(@Query() filter: LevelRewardFilterDto) {
 		const {
-			claims,
+			rewards,
 			total,
 			limit,
 			skip: offset,
-		} = await this.levelRewardsCore.getUncertainClaims({ take, skip });
+		} = await this.levelRewardsCore.listAllRewards(filter);
 		return buildPaginatedResponse(
-			claims,
-			'Reclamos de nivel inciertos obtenidos exitosamente',
+			rewards,
+			'Reclamos de nivel obtenidos exitosamente',
 			true,
 			{ total, limit, skip: offset },
 		);

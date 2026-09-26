@@ -2,6 +2,7 @@ export enum MissionType {
 	DAILY = 'DAILY',
 	WEEKLY = 'WEEKLY',
 	FIXED = 'FIXED',
+	SPECIAL = 'SPECIAL',
 }
 
 export enum MissionStatus {

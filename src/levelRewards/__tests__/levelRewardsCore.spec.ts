@@ -48,7 +48,6 @@ describe('LevelRewardsCore', () => {
 			acquireClaimLock: jest.fn(),
 			updateStatus: jest.fn(),
 			getPlayerRewards: jest.fn(),
-			findUncertainClaims: jest.fn(),
 		};
 
 		mockLevelsCore = {
@@ -235,10 +234,13 @@ describe('LevelRewardsCore', () => {
 
 		expect(result.rewards).toHaveLength(1);
 		expect(result.total).toBe(1);
-		expect(mockRewardRepo.getPlayerRewards).toHaveBeenCalledWith(10, {
-			status: RewardStatus.PENDING,
-			take: 10,
-			skip: 0,
-		});
+		expect(mockRewardRepo.getPlayerRewards).toHaveBeenCalledWith(
+			{
+				status: RewardStatus.PENDING,
+				take: 10,
+				skip: 0,
+			},
+			10,
+		);
 	});
 });

@@ -1,5 +1,9 @@
 import { CreateMissionDto } from '../../app/dto/create-mission.dto';
-import type { MissionBasic, MissionWithSteps } from '../../app/dto/mission.schema';
+import type {
+	MissionBasic,
+	MissionFilter,
+	MissionWithSteps,
+} from '../../app/dto/mission.schema';
 import { UpdateMissionDto } from '../../app/dto/update-mission.dto';
 
 export type UpdateMissionData = Omit<UpdateMissionDto, 'imageUrl'> & {
@@ -13,10 +17,7 @@ export interface ForDatabaseMissions {
 
 	findByIdWithSteps(id: number): Promise<MissionWithSteps | null>;
 
-	getMissions(params: {
-		take?: number;
-		skip?: number;
-	}): Promise<[MissionWithSteps[], number]>;
+	getMissions(filter?: MissionFilter): Promise<[MissionWithSteps[], number]>;
 
 	updateMission(id: number, data: UpdateMissionData): Promise<MissionBasic | null>;
 

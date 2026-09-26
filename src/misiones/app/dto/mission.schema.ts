@@ -7,6 +7,7 @@ import {
 } from '../../../shared/swagger/apiResponse.schema';
 import type { StepTargetConfig } from '../entities/mission-step.entity';
 import { MissionStatus, MissionType, StepType } from '../enums';
+import { BonusIntern } from '@/src/types/bonus';
 
 export const validationMissionMessages = {
 	title: {
@@ -266,7 +267,12 @@ export type MissionBasic = {
 	experiencePoints: number;
 	imageUrl?: string;
 	activatedAt?: Date;
-	expiresAt?: Date;
+  expiresAt?: Date;
+  room?: {
+    id?: number,
+    name?: string,
+    bonus?: BonusIntern
+  }
 };
 
 export type MissionStepBasic = {
@@ -374,3 +380,80 @@ export class StepResponseDto extends createZodDto(apiResponseSchema(z.object({})
 export class PlayerMissionsQueueResponseDto extends createZodDto(
 	PlayerMissionsQueueResponseSchema,
 ) {}
+
+// ─── Filter Schemas ───────────────────────────────────────────
+export enum SortOrder {
+	ASC = 'ASC',
+	DESC = 'DESC',
+}
+
+export const missionFilterSchema = z.object({
+	title: z.string().optional().describe('Búsqueda parcial por título'),
+	type: z.enum(MissionType).optional().describe('Tipo de misión: DAILY, WEEKLY o FIXED'),
+	status: z.enum(MissionStatus).optional().describe('Estado de la misión'),
+	roomId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por ID de sala'),
+	minCoins: z.coerce.number().int().min(0).optional().describe('Monedas mínimas (>=)'),
+	maxCoins: z.coerce.number().int().min(0).optional().describe('Monedas máximas (<=)'),
+	minExperience: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.optional()
+		.describe('Experiencia mínima (>=)'),
+	maxExperience: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.optional()
+		.describe('Experiencia máxima (<=)'),
+	orderDirection: z
+		.enum(SortOrder)
+		.default(SortOrder.DESC)
+		.optional()
+		.describe('Orden por fecha de creación (ASC o DESC, por defecto DESC)'),
+	take: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(100)
+		.default(50)
+		.describe('Cantidad de registros'),
+	skip: z.coerce.number().int().min(0).default(0).describe('Paginación / Offset'),
+});
+
+export const userMissionFilterSchema = z.object({
+	status: z
+		.enum(['IN_PROGRESS', 'COMPLETED', 'EXPIRED', 'CANCELLED'])
+		.optional()
+		.describe('Estado de la misión de usuario'),
+	missionId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por plantilla de misión'),
+	orderDirection: z
+		.enum(SortOrder)
+		.default(SortOrder.DESC)
+		.optional()
+		.describe('Orden por fecha de creación (ASC o DESC, por defecto DESC)'),
+	take: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(100)
+		.default(50)
+		.describe('Cantidad de registros'),
+	skip: z.coerce.number().int().min(0).default(0).describe('Paginación / Offset'),
+});
+
+export type MissionFilter = z.infer<typeof missionFilterSchema>;
+export type UserMissionFilter = z.infer<typeof userMissionFilterSchema>;
+
+export class MissionFilterDto extends createZodDto(missionFilterSchema) {}
+export class UserMissionFilterDto extends createZodDto(userMissionFilterSchema) {}

@@ -2,6 +2,7 @@ import type { FindOptionsWhere } from 'typeorm';
 
 import type {
 	UserMissionBasic,
+	UserMissionFilter,
 	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
 import type { UserMission } from '../../app/entities/user-mission.entity';
@@ -22,7 +23,7 @@ export interface ForDatabaseUserMissions {
 
 	findByPlayer(
 		playerId: number,
-		params: { take?: number; skip?: number },
+		filter?: UserMissionFilter,
 	): Promise<[UserMissionBasic[], number]>;
 
 	findByIdWithSteps(id: number): Promise<UserMissionWithSteps | null>;

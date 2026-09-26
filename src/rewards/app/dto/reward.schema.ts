@@ -8,6 +8,16 @@ import {
 import { zDateHelper } from '../../../shared/swagger/date.schema';
 import { RewardStatus } from '../enums';
 
+export enum RewardSortField {
+	CREATED_AT = 'created_at',
+	ID = 'id',
+}
+
+export enum SortOrder {
+	ASC = 'ASC',
+	DESC = 'DESC',
+}
+
 export const resolveUncertainRewardSchema = z.object({
 	action: z
 		.enum(['RESOLVE_CLAIMED', 'FORCE_RETRY'])
@@ -32,6 +42,42 @@ export const missionRewardSchema = z.object({
 	resolvedByAdminId: z.number().int().nullable().optional(),
 	claimedAt: zDateHelper.nullable().optional(),
 	missionTitle: z.string().optional(),
+	createdAt: zDateHelper.optional(),
+	updatedAt: zDateHelper.optional(),
+});
+
+export const rewardFilterSchema = z.object({
+	status: z.enum(RewardStatus).optional().describe('Filtrar por estado del reclamo'),
+	userMissionId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por ID de misión de usuario'),
+	playerId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por jugador (solo admin)'),
+	orderBy: z
+		.enum(RewardSortField)
+		.default(RewardSortField.CREATED_AT)
+		.optional()
+		.describe('Campo por el cual ordenar'),
+	orderDirection: z
+		.enum(SortOrder)
+		.default(SortOrder.DESC)
+		.optional()
+		.describe('Dirección del ordenamiento (ASC o DESC)'),
+	take: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(100)
+		.default(50)
+		.describe('Cantidad de registros por página (máx: 100)'),
+	skip: z.coerce.number().int().min(0).default(0).describe('Paginación / Offset'),
 });
 
 export type MissionRewardBasic = {
@@ -47,7 +93,11 @@ export type MissionRewardBasic = {
 	resolvedByAdminId?: number | null;
 	claimedAt?: Date | string | null;
 	missionTitle?: string;
+	createdAt?: Date | string;
+	updatedAt?: Date | string;
 };
+
+export type RewardFilter = z.infer<typeof rewardFilterSchema>;
 
 export const MissionRewardResponseSchema = apiResponseSchema(missionRewardSchema);
 export const MissionRewardListResponseSchema =
@@ -60,3 +110,4 @@ export class MissionRewardListResponseDto extends createZodDto(
 export class ResolveUncertainRewardDto extends createZodDto(
 	resolveUncertainRewardSchema,
 ) {}
+export class RewardFilterDto extends createZodDto(rewardFilterSchema) {}

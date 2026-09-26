@@ -49,8 +49,7 @@ describe('RewardsCore', () => {
 			createReward: jest.fn(),
 			findByUserMissionId: jest.fn(),
 			findById: jest.fn(),
-			findPendingByPlayer: jest.fn(),
-			findUncertainRewards: jest.fn(),
+			getRewards: jest.fn(),
 			acquireProcessingLock: jest.fn(),
 			updateStatus: jest.fn(),
 		};

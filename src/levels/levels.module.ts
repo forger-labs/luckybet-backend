@@ -14,24 +14,21 @@ import { LevelsCore } from './app/levelsCore';
 import type { ForDatabaseLevels } from './ports/drivers/forDatabaseLevels';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([LevelsEntity])],
-  controllers: [LevelsController],
-  providers: [
-    LevelsEntityService,
-    {
-      provide: LEVELS_REPO_PROVIDER,
-      useClass: LevelsEntityService,
-    },
-    {
-      provide: LEVELS_CORE_PROVIDER,
-      useFactory: (
-        repo: ForDatabaseLevels,
-        cache: ForCache,
-        storage: StorageService,
-      ) => new LevelsCore(repo, cache, storage),
-      inject: [LEVELS_REPO_PROVIDER, CACHE_PORT, STORAGE_SERVICE],
-    },
-  ],
-  exports: [LEVELS_REPO_PROVIDER, LEVELS_CORE_PROVIDER],
+	imports: [AuthModule, TypeOrmModule.forFeature([LevelsEntity])],
+	controllers: [LevelsController],
+	providers: [
+		LevelsEntityService,
+		{
+			provide: LEVELS_REPO_PROVIDER,
+			useClass: LevelsEntityService,
+		},
+		{
+			provide: LEVELS_CORE_PROVIDER,
+			useFactory: (repo: ForDatabaseLevels, cache: ForCache, storage: StorageService) =>
+				new LevelsCore(repo, cache, storage),
+			inject: [LEVELS_REPO_PROVIDER, CACHE_PORT, STORAGE_SERVICE],
+		},
+	],
+	exports: [LEVELS_REPO_PROVIDER, LEVELS_CORE_PROVIDER],
 })
 export class LevelsModule {}

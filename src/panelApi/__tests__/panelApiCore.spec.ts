@@ -19,6 +19,9 @@ describe('PanelApiCore', () => {
 	let adminPanelMock: jest.Mocked<ForAdminPanel>;
 	let cacheMock: jest.Mocked<ForCache>;
 	let playerRepoMock: jest.Mocked<ForDatabasePlayers>;
+	let levelsRepoMock: { findLowestLevel: jest.Mock };
+	let storageMock: { buildPublicUrl: jest.Mock };
+	let roomRepoMock: { findByName: jest.Mock; createRoom: jest.Mock };
 
 	beforeEach(() => {
 		configServiceMock = {
@@ -62,7 +65,27 @@ describe('PanelApiCore', () => {
 			findByUnique: jest.fn(),
 			getPlayers: jest.fn(),
 			updatePlayerById: jest.fn(),
-			addExperienceAndRecalculateLevel: jest.fn(),
+			addExperience: jest.fn(),
+			updateLevel: jest.fn(),
+		};
+
+		levelsRepoMock = {
+			findLowestLevel: jest.fn().mockResolvedValue({
+				id: 1,
+				name: 'Nivel 1',
+				image: 'lvl.png',
+				minExperience: 0,
+				coins: 0,
+			}),
+		};
+		storageMock = {
+			buildPublicUrl: jest.fn((k: string) => `https://cdn.test/${k}`),
+		};
+		roomRepoMock = {
+			findByName: jest.fn().mockResolvedValue(null),
+			createRoom: jest
+				.fn()
+				.mockResolvedValue({ id: 1, name: 'Default', bonus: '0', isActive: true }),
 		};
 
 		panelApiCore = new PanelApiCore(
@@ -71,6 +94,9 @@ describe('PanelApiCore', () => {
 			adminPanelMock,
 			cacheMock,
 			playerRepoMock,
+			levelsRepoMock as never,
+			storageMock as never,
+			roomRepoMock as never,
 		);
 	});
 
@@ -163,6 +189,8 @@ describe('PanelApiCore', () => {
 				username: 'newplayer123',
 				phone: '11223344',
 				isActive: true,
+				levelId: 1,
+				roomId: undefined,
 			});
 			expect(result).toMatchObject({
 				id: 42,

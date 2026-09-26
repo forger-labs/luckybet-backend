@@ -1,6 +1,10 @@
 import type { UploadableFile } from '../../../shared/storage/storage.port';
 import type { CreateMissionMultipartDto } from '../../app/dto/create-mission.dto';
-import type { MissionBasic, MissionWithSteps } from '../../app/dto/mission.schema';
+import type {
+	MissionBasic,
+	MissionFilter,
+	MissionWithSteps,
+} from '../../app/dto/mission.schema';
 import type { UpdateMissionDto } from '../../app/dto/update-mission.dto';
 import { MissionStatus } from '../../app/enums';
 
@@ -9,7 +13,7 @@ export interface ForManageMissions {
 
 	getMission(id: number): Promise<MissionWithSteps>;
 
-	listMissions(params: { take?: number; skip?: number }): Promise<{
+	listMissions(filter?: MissionFilter): Promise<{
 		missions: MissionWithSteps[];
 		total: number;
 		limit: number;

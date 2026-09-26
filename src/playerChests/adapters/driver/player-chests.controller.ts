@@ -17,9 +17,11 @@ import { JwtGuard } from '../../../auth/app/guards/jwt.guard';
 import { RolesGuard } from '../../../auth/app/guards/roles.guard';
 import { CurrentUser } from '../../../auth/decorators/currentUser.decorator';
 import { Roles } from '../../../auth/decorators/roles.decorator';
+import { ChestPeriodType } from '../../../chests/app/enums';
 import { CurrentPlayer } from '../../../panelApi/app/decorators/currentPlayer.decorator';
 import { PlayerTokenGuard } from '../../../panelApi/app/guards/playerToken.guard';
 import type { PlayerAuthContext } from '../../../panelApi/types/panelApiCore.types';
+import { RewardStatus } from '../../../rewards/app/enums';
 import {
 	buildPaginatedResponse,
 	buildResponse,
@@ -29,6 +31,7 @@ import { PLAYER_CHESTS_CORE_PROVIDER } from '../../app/constants';
 import {
 	ClaimChestResponseDto,
 	PlayerChestFilterDto,
+	PlayerChestProgressFilterDto,
 	PlayerChestProgressResponseDto,
 	ResolveUncertainChestClaimDto,
 	SinglePlayerChestProgressResponseDto,
@@ -54,8 +57,16 @@ export class PlayerChestsController {
 		required: true,
 	})
 	@ApiOkResponse({ type: PlayerChestProgressResponseDto })
-	async getProgress(@CurrentPlayer() player: PlayerAuthContext) {
-		const progress = await this.playerChestsCore.getPlayerChestsProgress(player.id);
+	@ApiQuery({ name: 'periodType', required: false, enum: ChestPeriodType })
+	@ApiQuery({ name: 'chestId', required: false, type: Number })
+	async getProgress(
+		@CurrentPlayer() player: PlayerAuthContext,
+		@Query() filter: PlayerChestProgressFilterDto,
+	) {
+		const progress = await this.playerChestsCore.getPlayerChestsProgress(
+			player.id,
+			filter,
+		);
 		return buildResponse(progress, 'Progreso de cofres obtenido exitosamente', true);
 	}
 
@@ -141,27 +152,30 @@ export class PlayerChestsController {
 
 	// ─── Admin Endpoints ───────────────────────────────────────────
 
-	@Get('admin/uncertain')
+	@Get('admin')
 	@UseGuards(JwtGuard, RolesGuard)
 	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@ApiCookieAuth()
 	@HttpCode(HttpStatus.OK)
+	@ApiOkResponse({ type: UserMissionChestListResponseDto })
+	@ApiQuery({ name: 'playerId', required: false, type: Number })
+	@ApiQuery({ name: 'chestId', required: false, type: Number })
+	@ApiQuery({ name: 'status', required: false, enum: RewardStatus })
+	@ApiQuery({ name: 'periodKey', required: false, type: String })
+	@ApiQuery({ name: 'orderBy', required: false, enum: ['created_at', 'periodKey', 'id'] })
+	@ApiQuery({ name: 'orderDirection', required: false, enum: ['ASC', 'DESC'] })
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
-	@ApiOkResponse({ type: UserMissionChestListResponseDto })
-	async getUncertainClaims(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
+	async listAdminChests(@Query() filter: PlayerChestFilterDto) {
 		const {
 			claims,
 			total,
 			limit,
 			skip: offset,
-		} = await this.playerChestsCore.getUncertainClaims({ take, skip });
+		} = await this.playerChestsCore.listAllChests(filter);
 		return buildPaginatedResponse(
 			claims,
-			'Reclamos de cofres inciertos obtenidos exitosamente',
+			'Reclamos de cofres obtenidos exitosamente',
 			true,
 			{ total, limit, skip: offset },
 		);

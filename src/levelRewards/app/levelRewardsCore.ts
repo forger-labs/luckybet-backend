@@ -19,10 +19,7 @@ import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms
 import type { ForManageLevelRewards } from '../ports/driven/ForManageLevelRewards';
 import type { ForDatabaseLevelRewards } from '../ports/driver/ForDatabaseLevelRewards';
 import { FOR_DATABASE_LEVEL_REWARDS } from './constants';
-import {
-	type LevelRewardBasic,
-	type LevelRewardFilter,
-} from './dto/level-reward.schema';
+import { type LevelRewardBasic, type LevelRewardFilter } from './dto/level-reward.schema';
 
 @Injectable()
 export class LevelRewardsCore implements ForManageLevelRewards {
@@ -228,7 +225,7 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 		limit: number;
 		skip: number;
 	}> {
-		const [rewards, total] = await this.rewardRepo.getPlayerRewards(playerId, filter);
+		const [rewards, total] = await this.rewardRepo.getPlayerRewards(filter, playerId);
 		return {
 			rewards,
 			total,
@@ -237,18 +234,18 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 		};
 	}
 
-	async getUncertainClaims(params?: { take?: number; skip?: number }): Promise<{
-		claims: LevelRewardBasic[];
+	async listAllRewards(filter: LevelRewardFilter): Promise<{
+		rewards: LevelRewardBasic[];
 		total: number;
 		limit: number;
 		skip: number;
 	}> {
-		const [claims, total] = await this.rewardRepo.findUncertainClaims(params);
+		const [rewards, total] = await this.rewardRepo.getPlayerRewards(filter);
 		return {
-			claims,
+			rewards,
 			total,
-			limit: params?.take ?? 50,
-			skip: params?.skip ?? 0,
+			limit: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		};
 	}
 

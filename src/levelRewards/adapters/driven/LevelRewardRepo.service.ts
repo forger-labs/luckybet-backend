@@ -89,20 +89,25 @@ export class LevelRewardRepoService implements ForDatabaseLevelRewards {
 	}
 
 	async getPlayerRewards(
-		playerId: number,
-		filter: LevelRewardFilter,
+		filter?: LevelRewardFilter,
+		overridePlayerId?: number,
 	): Promise<[LevelRewardBasic[], number]> {
-		const where: FindOptionsWhere<LevelReward> = { playerId };
+		const where: FindOptionsWhere<LevelReward> = {};
+		if (overridePlayerId !== undefined) {
+			where.playerId = overridePlayerId;
+		} else if (filter?.playerId !== undefined && filter?.playerId !== null) {
+			where.playerId = filter.playerId;
+		}
 
-		if (filter.levelId) {
+		if (filter?.levelId) {
 			where.levelId = filter.levelId;
 		}
-		if (filter.status) {
+		if (filter?.status) {
 			where.status = filter.status;
 		}
 
-		const orderField = filter.orderBy ?? LevelRewardSortField.CREATED_AT;
-		const orderDir = filter.orderDirection ?? SortOrder.DESC;
+		const orderField = filter?.orderBy ?? LevelRewardSortField.CREATED_AT;
+		const orderDir = filter?.orderDirection ?? SortOrder.DESC;
 		const order: FindOptionsOrder<LevelReward> = {
 			[orderField]: orderDir,
 		};
@@ -110,8 +115,8 @@ export class LevelRewardRepoService implements ForDatabaseLevelRewards {
 		const [list, count] = await this.rewardModel.findAndCount({
 			where,
 			order,
-			take: filter.take ?? 50,
-			skip: filter.skip ?? 0,
+			take: filter?.take ?? 50,
+			skip: filter?.skip ?? 0,
 		});
 
 		return [list.map(r => this.toBasic(r)), count];

@@ -1,4 +1,4 @@
-import type { MissionRewardBasic } from '../../app/dto/reward.schema';
+import type { MissionRewardBasic, RewardFilter } from '../../app/dto/reward.schema';
 import { RewardStatus } from '../../app/enums';
 
 export type CreateMissionRewardInput = {
@@ -16,12 +16,10 @@ export interface ForDatabaseMissionRewards {
 
 	findById(id: number): Promise<MissionRewardBasic | null>;
 
-	findPendingByPlayer(playerId: number): Promise<MissionRewardBasic[]>;
-
-	findUncertainRewards(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[MissionRewardBasic[], number]>;
+	getRewards(
+		filter?: RewardFilter,
+		overridePlayerId?: number,
+	): Promise<[MissionRewardBasic[], number]>;
 
 	acquireProcessingLock(
 		userMissionId: number,

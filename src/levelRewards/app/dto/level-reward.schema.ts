@@ -35,6 +35,12 @@ export const levelRewardBasicSchema = z.object({
 });
 
 export const levelRewardFilterSchema = z.object({
+	playerId: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe('Filtrar por jugador (solo admin)'),
 	levelId: z.coerce.number().int().positive().optional().describe('Filtrar por nivel'),
 	status: z.enum(RewardStatus).optional().describe('Filtrar por estado del reclamo'),
 	orderBy: z

@@ -38,6 +38,7 @@ import { AdminRoles, type User } from '../../../users/app/entities/user.entity';
 import { MISIONES_CORE_PROVIDER } from '../../app/constants';
 import { CreateMissionMultipartDto } from '../../app/dto/create-mission.dto';
 import {
+	MissionFilterDto,
 	MissionListResponseDto,
 	MissionResponseDto,
 	PlayerMissionsQueueResponseDto,
@@ -91,13 +92,24 @@ export class MissionsController {
 	@Get()
 	@HttpCode(HttpStatus.OK)
 	@ApiOkResponse({ type: MissionListResponseDto })
+	@ApiQuery({ name: 'title', required: false, type: String })
+	@ApiQuery({ name: 'type', required: false, enum: MissionType })
+	@ApiQuery({ name: 'status', required: false, enum: MissionStatus })
+	@ApiQuery({ name: 'roomId', required: false, type: Number })
+	@ApiQuery({ name: 'minCoins', required: false, type: Number })
+	@ApiQuery({ name: 'maxCoins', required: false, type: Number })
+	@ApiQuery({ name: 'minExperience', required: false, type: Number })
+	@ApiQuery({ name: 'maxExperience', required: false, type: Number })
+	@ApiQuery({
+		name: 'orderDirection',
+		required: false,
+		enum: ['ASC', 'DESC'],
+		description: 'Orden por fecha de creación (ASC o DESC)',
+	})
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
-	async findAll(
-		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
-		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
-	) {
-		const response = await this.misionesCore.listMissions({ take, skip });
+	async findAll(@Query() filter: MissionFilterDto) {
+		const response = await this.misionesCore.listMissions(filter);
 		return buildPaginatedResponse(
 			response.missions,
 			'Misiones obtenidas exitosamente',

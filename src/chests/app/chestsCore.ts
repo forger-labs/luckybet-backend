@@ -148,7 +148,12 @@ export class ChestsCore implements ForManageChests {
 		limit: number;
 		skip: number;
 	}> {
-		const [chests, total] = await this.chestRepo.getChests(params);
+		const [chests, total] = await this.chestRepo.getChests({
+			take: params.take ?? 100,
+			skip: params.skip ?? 0,
+			periodType: params.periodType,
+			isActive: params.isActive,
+		});
 		return {
 			chests: chests.map(c => ({
 				...c,

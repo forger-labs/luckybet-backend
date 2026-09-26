@@ -36,12 +36,7 @@ export interface ForDatabaseLevelRewards {
 	): Promise<LevelRewardBasic>;
 
 	getPlayerRewards(
-		playerId: number,
-		filter: LevelRewardFilter,
+		filter?: LevelRewardFilter,
+		overridePlayerId?: number,
 	): Promise<[LevelRewardBasic[], number]>;
-
-	findUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[LevelRewardBasic[], number]>;
 }
