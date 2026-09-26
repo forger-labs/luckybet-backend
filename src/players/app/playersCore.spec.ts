@@ -56,7 +56,9 @@ describe('PlayersCore', () => {
 		panelApiCoreMock = {
 			authenticatePlayer: jest.fn(),
 			syncOrRegisterPlayer: jest.fn(),
-			creditPlayer: jest.fn(),
+      creditPlayer: jest.fn(),
+      getGameList: jest.fn(),
+			getProviders: jest.fn(),
 			debitPlayer: jest.fn(),
 			getLastPlayedGame: jest.fn(),
 			getLastPlayedGames: jest.fn(),

@@ -99,7 +99,7 @@ export interface PlayedGame {
 	provider?: string;
 	imageUrl?: string;
 	lastPlayedAt: string;
-	totalWagerInPeriod?: number;
+	totalBetInPeriod?: number;
 	playCount?: number;
 }
 
@@ -130,7 +130,8 @@ export interface LuckyBetHistorySessionItem {
 	date?: string;
 	time?: string;
 	wager?: number | string;
-	win?: number | string;
+  win?: number | string;
+  bet?  : string | number,
 	session?: string;
 	[key: string]: unknown;
 }
@@ -147,6 +148,6 @@ export interface LuckyBetHistoryResponse {
 	history?: LuckyBetHistorySessionItem[];
 	dataList?: unknown[];
 	error?: string;
-	errorMessage?: string;
+  errorMessage?: string;
 	[key: string]: unknown;
 }

@@ -31,7 +31,12 @@ export interface ForUserPanel {
 	login(login: string, password: string): Promise<LuckyBetLoginResponse>;
 
 	/**
-	 * Retrieves the LuckyBet game catalog, cached in Redis with a 1-hour TTL.
+	 * Initializes site session to obtain before_token for public operations.
+	 */
+	siteInitialize(): Promise<string>;
+
+	/**
+	 * Retrieves the LuckyBet game catalog, cached in Redis with a 24-hour TTL.
 	 */
 	getGameList(token?: string): Promise<LuckyBetGameItem[]>;
 

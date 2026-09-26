@@ -210,9 +210,9 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ### 2.3 Módulo: `Panel` (`/api/v1.0/panel`)
 
 #### `GET /api/v1.0/panel/games`
-- **Propósito**: Catálogo completo de juegos disponibles en LuckyBet (enriquecido con imágenes y proveedores, cacheado en Redis 1 hora).
+- **Propósito**: Catálogo completo de juegos disponibles en LuckyBet (enriquecido con imágenes y proveedores, obtenido mediante `siteInitialize` con `before_token` y cacheado en Redis por 24 horas).
 - **Tipo de Contenido**: Sin cuerpo.
-- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
+- **Autenticación / Token**: Pública (No requiere sesión ni token de jugador).
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -224,7 +224,34 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
         "name": "sweet_bonanza",
         "title": "Sweet Bonanza",
         "provider": "Pragmatic Play",
+        "label": "Pragmatic Play",
         "img": "https://cdn.luckybet.site/games/sweet_bonanza.png"
+      }
+    ]
+  }
+  ```
+
+#### `GET /api/v1.0/panel/providers`
+- **Propósito**: Lista deduplicada y ordenada alfabéticamente de proveedores de juegos en LuckyBet (extraídos a partir del campo `label` del catálogo de juegos) con almacenamiento y caché en Redis por 24 horas.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: Pública (No requiere sesión ni token de jugador).
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Lista de proveedores obtenida exitosamente",
+    "data": [
+      {
+        "name": "Amusnet",
+        "slug": "amusnet"
+      },
+      {
+        "name": "Betsoft",
+        "slug": "betsoft"
+      },
+      {
+        "name": "Pragmatic Play",
+        "slug": "pragmatic-play"
       }
     ]
   }

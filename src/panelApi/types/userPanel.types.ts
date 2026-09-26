@@ -25,3 +25,17 @@ export type LuckyBetLoginResponse = LuckyBetResponse<LuckyBetLoginResponseConten
 export type LuckyBetGameListResponse = LuckyBetResponse<
 	LuckyBetGameItem[] | { games: LuckyBetGameItem[] }
 >;
+
+export interface LuckyBetSiteInitializeContent {
+	before_token: string;
+	languages?: {
+		current?: string;
+		list?: string[];
+	};
+	settings?: Record<string, unknown>;
+	system?: Record<string, unknown>;
+	[key: string]: unknown;
+}
+
+export type LuckyBetSiteInitializeResponse =
+	LuckyBetResponse<LuckyBetSiteInitializeContent>;

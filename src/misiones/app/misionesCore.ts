@@ -60,7 +60,16 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 	// ─── Admin: Mission CRUD ────────────────────────────────────
 
 	async createMission(data: CreateMissionMultipartDto): Promise<MissionWithSteps> {
-		const { image, ...missionData } = data;
+    const { image, ...missionData } = data;
+
+    for (const step of missionData.missionSteps) {
+      if (step.targetConfig?.gameId && step.targetConfig.provider) {
+        throw new BadRequestException("Escoge proveedor o juego pero no escojas los dos")
+      }
+      if (step.targetConfig?.gameId && step.targetConfig?.minUniqueGames !== undefined && step.targetConfig?.minUniqueGames > 1 ) {
+       throw new BadRequestException("Si escoges un juego y un minimo de juegos unicos, entonces el minimo no puede ser mayor 1 y no puede ser 0")
+      }
+    }
 
 		const imageUrl = await this.storage.uploadImage(image, 'missions');
 		try {
@@ -339,7 +348,8 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			token,
 		});
 
-		const minUniqueGames = targetConfig?.minUniqueGames ?? 1;
+		const minUniqueGames = targetConfig?.gameId ? 1 : targetConfig?.minUniqueGames ?? 1;
+
 		if (history.totalUniqueGames < minUniqueGames) {
 			throw new BadRequestException(
 				`Aun no cumples el requisito: se requieren ${minUniqueGames} juego(s) y tienes ${history.totalUniqueGames}`,

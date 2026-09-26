@@ -24,11 +24,14 @@ import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms
 import { CACHE_PORT } from '../../shared/cache/constants';
 import type { ForCache } from '../../shared/cache/ports/forCache.port';
 import { BonusIntern } from '../../types/bonus';
+import type { LuckyBetGameItem, LuckyBetProvider } from '../app/dtos/game.schema';
 import {
+	DEFAULT_LUCKYBET_PROVIDERS_TTL_SECONDS,
 	DEFAULT_PLAYER_TOKEN_SESSION_TTL_SECONDS,
 	FOR_ADMIN_PANEL,
 	FOR_USER_PANEL,
 	LUCKYBET_PLAYER_SESSION_KEY_PREFIX,
+	LUCKYBET_PROVIDERS_CACHE_KEY,
 } from '../constants';
 import type { ForAdminPanel } from '../ports/forAdminPanel.port';
 import type { ForPanelApiCore } from '../ports/forPanelApiCore.port';
@@ -323,7 +326,7 @@ export class PanelApiCore implements ForPanelApiCore {
 				const matched = gameList.find(
 					item =>
 						String(item.id).toLowerCase() === game.gameId.toLowerCase() ||
-						(item.name && item.name.toLowerCase() === game.gameId.toLowerCase()),
+						(item.name && item.name.toLowerCase() === game.gameName.toLowerCase()),
 				);
 				if (matched) {
 					if (matched.title || matched.name) {
@@ -334,7 +337,15 @@ export class PanelApiCore implements ForPanelApiCore {
 					}
 					if (matched.img) {
 						game.imageUrl = matched.img;
-					}
+          }
+          const bet = Number(matched.bet)
+          if (!Number.isNaN(bet)) {
+            if (game.totalBetInPeriod === undefined) {
+              game.totalBetInPeriod = bet
+            } else {
+              game.totalBetInPeriod += bet;
+            }
+         }
 				}
 			}
 		}
@@ -363,6 +374,60 @@ export class PanelApiCore implements ForPanelApiCore {
 	/**
 	 * Resolves a userId or username into a canonical numeric/string LuckyBet ID.
 	 */
+
+	/**
+	 * Retrieves the LuckyBet game catalog via UserPanel.
+	 */
+	async getGameList(token?: string): Promise<LuckyBetGameItem[]> {
+		return await this.userPanel.getGameList(token);
+	}
+
+	/**
+	 * Retrieves deduplicated game providers extracted from gameList (label key), cached in Redis.
+	 */
+	async getProviders(): Promise<LuckyBetProvider[]> {
+		const cached = await this.cache.get<LuckyBetProvider[]>(LUCKYBET_PROVIDERS_CACHE_KEY);
+		if (cached && Array.isArray(cached) && cached.length > 0) {
+			return cached;
+		}
+
+		const gameList = await this.getGameList();
+		const providersMap = new Map<string, string>();
+
+		for (const game of gameList) {
+			const rawLabel = game.label || game.provider;
+			if (!rawLabel || typeof rawLabel !== 'string') continue;
+
+			const trimmed = rawLabel.trim();
+			if (!trimmed) continue;
+
+			const normalizedKey = trimmed.toLowerCase();
+			if (!providersMap.has(normalizedKey)) {
+				providersMap.set(normalizedKey, trimmed);
+			}
+		}
+
+		const providers: LuckyBetProvider[] = Array.from(providersMap.values())
+			.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+			.map(name => ({
+				name,
+				slug: name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-+|-+$/g, ''),
+			}));
+
+		if (providers.length > 0) {
+			await this.cache.set(
+				LUCKYBET_PROVIDERS_CACHE_KEY,
+				providers,
+				DEFAULT_LUCKYBET_PROVIDERS_TTL_SECONDS,
+			);
+		}
+
+		return providers;
+	}
+
 	private async resolveLuckyBetUserId(
 		userIdOrUsername: string | number,
 	): Promise<string | number> {

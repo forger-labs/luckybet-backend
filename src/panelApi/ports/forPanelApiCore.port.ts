@@ -1,4 +1,5 @@
 import type { PlayerWithoutAudit } from '@/src/players/app/dto/player.schema';
+import type { LuckyBetGameItem, LuckyBetProvider } from '../app/dtos/game.schema';
 import type {
 	GetPlayedGamesOptions,
 	LuckyBetBalanceMutationOptions,
@@ -75,4 +76,14 @@ export interface ForPanelApiCore {
 	hashToken(token: string): string;
 
 	changePlayerSenior(userId: string | number, seniorName: string): Promise<boolean>;
+
+	/**
+	 * Retrieves the LuckyBet game catalog.
+	 */
+	getGameList(token?: string): Promise<LuckyBetGameItem[]>;
+
+	/**
+	 * Retrieves deduplicated game providers extracted from gameList (label key), cached in Redis.
+	 */
+	getProviders(): Promise<LuckyBetProvider[]>;
 }

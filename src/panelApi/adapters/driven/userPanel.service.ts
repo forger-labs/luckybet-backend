@@ -13,24 +13,29 @@ import type { ForCache } from '../../../shared/cache/ports/forCache.port';
 import { LuckyBetGameItem } from '../../app/dtos/game.schema';
 import {
 	AXIOS_USER_PANEL,
+	DEFAULT_LUCKYBET_BEFORE_TOKEN_TTL_SECONDS,
 	DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS,
 	DEFAULT_LUCKYBET_GAME_CATALOG_TTL_SECONDS,
+	LUCKYBET_BEFORE_TOKEN_CACHE_KEY,
 	LUCKYBET_GAME_CATALOG_CACHE_KEY,
 } from '../../constants';
 import type { ForUserPanel } from '../../ports/forUserPanel.port';
 import type {
 	LuckyBetLoginResponse,
 	LuckyBetLoginResponseContent,
+	LuckyBetSiteInitializeContent,
 	PlayerLastPlayedGameResult,
 } from '../../types/userPanel.types';
 
 @Injectable()
 export class UserPanelService implements ForUserPanel {
+	private readonly logger = new Logger(UserPanelService.name);
 	private readonly apiUrl: string;
 	private readonly domain: string;
 	private readonly version: number;
 	private readonly gameActivityTtl: number;
 	private readonly gameCatalogTtl: number;
+	private readonly beforeTokenTtl: number;
 	private readonly headers = {
 		'Content-Type': 'application/json',
 		Accept: 'application/json',
@@ -70,6 +75,12 @@ export class UserPanelService implements ForUserPanel {
 				DEFAULT_LUCKYBET_GAME_CATALOG_TTL_SECONDS,
 			),
 		);
+		this.beforeTokenTtl = Number(
+			config.get<number | string>(
+				'LUCKYBET_BEFORE_TOKEN_TTL_SECONDS',
+				DEFAULT_LUCKYBET_BEFORE_TOKEN_TTL_SECONDS,
+			),
+		);
 	}
 
 	/**
@@ -82,7 +93,7 @@ export class UserPanelService implements ForUserPanel {
 		const body: LuckyBetRequest = {
 			cmd,
 			version: this.version,
-			domain: this.domain,
+			domain: this.domain.startsWith('http') ? this.domain : `https://${this.domain}`,
 			...payload,
 		};
 
@@ -108,6 +119,30 @@ export class UserPanelService implements ForUserPanel {
 				error: 'Error de conexión con el servidor de LuckyBet.',
 			};
 		}
+	}
+
+	/**
+	 * Calls siteInitialize to obtain a before_token, caching it in Redis.
+	 */
+	async siteInitialize(): Promise<string> {
+		const cached = await this.cache.get<string>(LUCKYBET_BEFORE_TOKEN_CACHE_KEY);
+		if (cached && typeof cached === 'string' && cached.trim()) {
+			return cached.trim();
+		}
+
+		const response =
+			await this.executeCommand<LuckyBetSiteInitializeContent>('siteInitialize');
+
+		if (response.status === 'success' && response.content?.before_token) {
+			const token = String(response.content.before_token).trim();
+			await this.cache.set(LUCKYBET_BEFORE_TOKEN_CACHE_KEY, token, this.beforeTokenTtl);
+			return token;
+		}
+
+		this.logger.error(
+			`Error al ejecutar siteInitialize en LuckyBet: ${response.error || response.errorCode || 'Token ausente'}`,
+		);
+		return '';
 	}
 
 	/**
@@ -139,20 +174,36 @@ export class UserPanelService implements ForUserPanel {
 	}
 
 	/**
-	 * Retrieves the LuckyBet game catalog, cached in Redis with a 1-hour TTL.
+	 * Retrieves the LuckyBet game catalog, cached in Redis with a 24-hour TTL.
+	 * If no token is provided, it automatically retrieves and uses the before_token.
 	 */
 	async getGameList(token?: string): Promise<LuckyBetGameItem[]> {
 		const cached = await this.cache.get<LuckyBetGameItem[]>(
 			LUCKYBET_GAME_CATALOG_CACHE_KEY,
 		);
-		// if (cached && Array.isArray(cached) && cached.length > 0) {
-		// 	return cached;
-		// }
+		if (cached && Array.isArray(cached) && cached.length > 0) {
+			return cached;
+		}
 
-		const response = await this.executeCommand<
+		let activeToken = token?.trim() ? token.trim() : '';
+
+		if (!activeToken) {
+			activeToken = await this.siteInitialize();
+		}
+
+		let response = await this.executeCommand<
 			LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
-		>('gameList', token ? { token } : {});
-console.log(response)
+		>('gameList', activeToken ? { before_token: activeToken } : {});
+
+		// Si falló y no era un token custom de usuario, intentar refrescar el before_token una vez
+		if (response.status !== 'success' && !token?.trim()) {
+			await this.cache.del(LUCKYBET_BEFORE_TOKEN_CACHE_KEY);
+			activeToken = await this.siteInitialize();
+			response = await this.executeCommand<
+				LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
+			>('gameList', activeToken ? { token: activeToken } : {});
+		}
+
 		let games: LuckyBetGameItem[] = [];
 
 		if (response.status === 'success' && response.content) {

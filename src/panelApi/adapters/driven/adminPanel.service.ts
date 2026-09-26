@@ -502,7 +502,7 @@ export class AdminPanelService implements ForAdminPanel {
 				if (!gameIdentifier) continue;
 
 				const rawId = String(gameIdentifier);
-				const wagerAmount = Number(item.wager) || 0;
+				const betAmount = Number(item.bet) || 0;
 				const lastPlayedAt =
 					item.datetime ||
 					(item.date && item.time ? `${item.date} ${item.time}` : toDateStr);
@@ -512,15 +512,15 @@ export class AdminPanelService implements ForAdminPanel {
 						gameId: rawId,
 						gameName: item.game_name || this.formatGameName(String(gameIdentifier)),
 						lastPlayedAt,
-						totalWagerInPeriod: wagerAmount,
+						totalBetInPeriod: betAmount,
 						playCount: 1,
 					});
 				} else {
 					const existing = deduplicatedGames.get(rawId);
 					if (existing) {
 						existing.playCount = (existing.playCount || 1) + 1;
-						existing.totalWagerInPeriod =
-							(existing.totalWagerInPeriod || 0) + wagerAmount;
+						existing.totalBetInPeriod =
+							(existing.totalBetInPeriod || 0) + betAmount;
 					}
 				}
 			}
@@ -558,15 +558,15 @@ export class AdminPanelService implements ForAdminPanel {
 						gameId: rawId,
 						gameName: this.formatGameName(rawId),
 						lastPlayedAt,
-						totalWagerInPeriod: wagerAmount,
+						totalBetInPeriod: wagerAmount,
 						playCount: 1,
 					});
 				} else {
 					const existing = deduplicatedGames.get(rawId);
 					if (existing) {
 						existing.playCount = (existing.playCount || 1) + 1;
-						existing.totalWagerInPeriod =
-							(existing.totalWagerInPeriod || 0) + wagerAmount;
+						existing.totalBetInPeriod =
+							(existing.totalBetInPeriod || 0) + wagerAmount;
 					}
 				}
 			}
@@ -579,7 +579,7 @@ export class AdminPanelService implements ForAdminPanel {
 				name?: string;
 				title?: string;
 				img?: string;
-				provider?: string;
+				label?: string;
 			}>
 		>(LUCKYBET_GAME_CATALOG_CACHE_KEY);
 
@@ -594,8 +594,9 @@ export class AdminPanelService implements ForAdminPanel {
 					if (matched.title || matched.name) {
 						game.gameName = matched.title || matched.name || game.gameName;
 					}
-					if (matched.provider) {
-						game.provider = matched.provider;
+					const providerName = matched.label || (matched as { provider?: string }).provider;
+					if (providerName) {
+						game.provider = providerName;
 					}
 					if (matched.img) {
 						game.imageUrl = matched.img;

@@ -1,28 +1,38 @@
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
 
 import { buildResponse } from '@/src/shared/libs/buildResponse';
-import { CurrentToken } from '../../app/decorators/currentPlayer.decorator';
-import { LuckyBetGameItemResponseDTO } from '../../app/dtos/game.schema';
-import { PlayerTokenGuard } from '../../app/guards/playerToken.guard';
-import { FOR_USER_PANEL } from '../../constants';
-import type { ForUserPanel } from '../../panel.port';
+import {
+	LuckyBetGameItemResponseDTO,
+	LuckyBetProvidersResponseDTO,
+} from '../../app/dtos/game.schema';
+import { FOR_PANEL_API_CORE } from '../../constants';
+import type { ForPanelApiCore } from '../../ports/forPanelApiCore.port';
 
 @Controller('panel')
 export class PanelController {
 	constructor(
-		@Inject(FOR_USER_PANEL)
-		private readonly userPanel: ForUserPanel,
+		@Inject(FOR_PANEL_API_CORE)
+		private readonly panelApi: ForPanelApiCore,
 	) {}
 
 	@Get('/games')
-	// @UseGuards(PlayerTokenGuard)
 	@ApiOkResponse({
 		type: LuckyBetGameItemResponseDTO,
 	})
-	async gameList(@CurrentToken() token: string) {
-		const gameList = await this.userPanel.getGameList('');
+	async gameList() {
+		const gameList = await this.panelApi.getGameList();
 
 		return buildResponse(gameList, 'Lista de juegos obtenida', true);
+	}
+
+	@Get('/providers')
+	@ApiOkResponse({
+		type: LuckyBetProvidersResponseDTO,
+	})
+	async getProviders() {
+		const providers = await this.panelApi.getProviders();
+
+		return buildResponse(providers, 'Lista de proveedores obtenida exitosamente', true);
 	}
 }

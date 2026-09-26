@@ -37,6 +37,7 @@ describe('PanelApiCore', () => {
 			login: jest.fn(),
 			getGameList: jest.fn(),
 			getLastPlayedGame: jest.fn(),
+			siteInitialize: jest.fn(),
 		};
 
 		adminPanelMock = {
@@ -271,6 +272,16 @@ describe('PanelApiCore', () => {
 		});
 	});
 
+	describe('getGameList', () => {
+		it('debe delegar la llamada a userPanel.getGameList', async () => {
+			const mockGames = [{ id: '1', name: 'game1', title: 'Game 1' }];
+			userPanelMock.getGameList.mockResolvedValueOnce(mockGames as never);
+
+			const result = await panelApiCore.getGameList();
+			expect(result).toEqual(mockGames);
+			expect(userPanelMock.getGameList).toHaveBeenCalledWith(undefined);
+		});
+	});
 	describe('invalidatePlayerSession', () => {
 		it('should delete token hash key from Redis', async () => {
 			await panelApiCore.invalidatePlayerSession('token-to-delete');
@@ -417,14 +428,14 @@ describe('PanelApiCore', () => {
 						gameName: 'Sweet Bonanza',
 						lastPlayedAt: '2026-09-21 12:00:00',
 						playCount: 4,
-						totalWagerInPeriod: 1200,
+						totalBetInPeriod: 1200,
 					},
 					{
 						gameId: 'gates_of_olympus',
 						gameName: 'Gates of Olympus',
 						lastPlayedAt: '2026-09-20 18:00:00',
 						playCount: 1,
-						totalWagerInPeriod: 500,
+						totalBetInPeriod: 500,
 					},
 				],
 			});
@@ -519,6 +530,46 @@ describe('PanelApiCore', () => {
 			expect(result.games).toHaveLength(1);
 			expect(result.games[0].gameName).toBe('Wolf Gold');
 			expect(result.totalUniqueGames).toBe(1);
+		});
+	});
+
+	describe('getProviders', () => {
+		it('debe retornar proveedores desde caché si existen', async () => {
+			const cachedProviders = [{ name: 'Pragmatic Play', slug: 'pragmatic-play' }];
+			cacheMock.get.mockResolvedValueOnce(cachedProviders);
+
+			const result = await panelApiCore.getProviders();
+			expect(result).toEqual(cachedProviders);
+			expect(userPanelMock.getGameList).not.toHaveBeenCalled();
+		});
+
+		it('debe extraer, deduplicar por label y ordenar proveedores alfabéticamente guardando en Redis', async () => {
+			cacheMock.get.mockResolvedValueOnce(null);
+			userPanelMock.getGameList.mockResolvedValueOnce([
+				{ id: '1', name: 'g1', label: 'Pragmatic Play' },
+				{ id: '2', name: 'g2', label: 'pragmatic play' }, // duplicado insensible
+				{ id: '3', name: 'g3', label: 'Amusnet' },
+				{ id: '4', name: 'g4', provider: 'Betsoft' }, // sin label, fallback en provider
+				{ id: '5', name: 'g5', label: '' }, // vacío
+			] as never);
+
+			const result = await panelApiCore.getProviders();
+
+			expect(result).toEqual([
+				{ name: 'Amusnet', slug: 'amusnet' },
+				{ name: 'Betsoft', slug: 'betsoft' },
+				{ name: 'Pragmatic Play', slug: 'pragmatic-play' },
+			]);
+
+			expect(cacheMock.set).toHaveBeenCalledWith(
+				'luckybet:catalog:providers',
+				[
+					{ name: 'Amusnet', slug: 'amusnet' },
+					{ name: 'Betsoft', slug: 'betsoft' },
+					{ name: 'Pragmatic Play', slug: 'pragmatic-play' },
+				],
+				86_400,
+			);
 		});
 	});
 
