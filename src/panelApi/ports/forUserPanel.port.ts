@@ -33,7 +33,7 @@ export interface ForUserPanel {
 	/**
 	 * Initializes site session to obtain before_token for public operations.
 	 */
-	siteInitialize(): Promise<string>;
+	siteInitialize(): Promise<string[]>;
 
 	/**
 	 * Retrieves the LuckyBet game catalog, cached in Redis with a 24-hour TTL.

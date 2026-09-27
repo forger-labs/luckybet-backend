@@ -37,8 +37,15 @@ export class UserPanelService implements ForUserPanel {
 	private readonly gameCatalogTtl: number;
 	private readonly beforeTokenTtl: number;
 	private readonly headers = {
-		'Content-Type': 'application/json',
-		Accept: 'application/json',
+		// 'Content-Type': 'application/json',
+  //   Accept: 'application/json',
+    'Content-Type': 'application/json',
+    'Sec-Fetch-Site': 'same-site',
+    'Accept': 'application/json, text/plain, */*',
+    // 'X-Requested-With': 'XMLHttpRequest',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+    'Origin': 'https://luckybet.site',
+    'Referer': 'https://luckybet.site/',
 	};
 
 	constructor(
@@ -88,8 +95,9 @@ export class UserPanelService implements ForUserPanel {
 	 */
 	async executeCommand<TResContent = unknown>(
 		cmd: string,
-		payload: Record<string, unknown> = {},
-	): Promise<LuckyBetResponse<TResContent>> {
+    payload: Record<string, unknown> = {},
+    cookies?: string[],
+	): Promise<LuckyBetResponse<TResContent> & {cookies?: string[]}> {
 		const body: LuckyBetRequest = {
 			cmd,
 			version: this.version,
@@ -103,11 +111,14 @@ export class UserPanelService implements ForUserPanel {
 				body,
 				{
 					headers: {
-						...this.headers,
+            ...this.headers,
+            ...(Array.isArray(cookies) ? {'Cookie': cookies.join('; ')} : {} )
 					},
 				},
-			);
-			return response.data;
+      );
+
+      const cookiesRaw = response.headers['set-cookie']
+			return {...response.data, cookies: cookiesRaw};
 		} catch (error) {
 			if (axios.isAxiosError(error) && error.response?.data) {
 				return error.response.data as LuckyBetResponse<TResContent>;
@@ -124,25 +135,24 @@ export class UserPanelService implements ForUserPanel {
 	/**
 	 * Calls siteInitialize to obtain a before_token, caching it in Redis.
 	 */
-	async siteInitialize(): Promise<string> {
-		const cached = await this.cache.get<string>(LUCKYBET_BEFORE_TOKEN_CACHE_KEY);
-		if (cached && typeof cached === 'string' && cached.trim()) {
-			return cached.trim();
+	async siteInitialize(): Promise<string[]> {
+		const cached = await this.cache.get<string[]>(LUCKYBET_BEFORE_TOKEN_CACHE_KEY);
+		if (cached && Array.isArray(cached)) {
+			return cached;
 		}
 
 		const response =
 			await this.executeCommand<LuckyBetSiteInitializeContent>('siteInitialize');
 
-		if (response.status === 'success' && response.content?.before_token) {
-			const token = String(response.content.before_token).trim();
-			await this.cache.set(LUCKYBET_BEFORE_TOKEN_CACHE_KEY, token, this.beforeTokenTtl);
-			return token;
+    if (response.status === 'success' && Array.isArray(response.cookies) ) {
+			await this.cache.set(LUCKYBET_BEFORE_TOKEN_CACHE_KEY, response.cookies, this.beforeTokenTtl);
+			return response.cookies;
 		}
 
 		this.logger.error(
 			`Error al ejecutar siteInitialize en LuckyBet: ${response.error || response.errorCode || 'Token ausente'}`,
 		);
-		return '';
+		return [];
 	}
 
 	/**
@@ -173,6 +183,15 @@ export class UserPanelService implements ForUserPanel {
 		});
 	}
 
+  private extractSessionId(cookies: string[]): string {
+    if (cookies.length > 0) {
+      const rawCookie = cookies.find((pred) => pred.includes('PHPSESSID'));
+      const [, phpsessionId] = (rawCookie || '').match(/PHPSESSID=([a-zA-Z0-9]+)/) || []
+      return phpsessionId || ''
+    }
+    return ''
+}
+
 	/**
 	 * Retrieves the LuckyBet game catalog, cached in Redis with a 24-hour TTL.
 	 * If no token is provided, it automatically retrieves and uses the before_token.
@@ -183,25 +202,28 @@ export class UserPanelService implements ForUserPanel {
 		);
 		if (cached && Array.isArray(cached) && cached.length > 0) {
 			return cached;
-		}
+    }
 
-		let activeToken = token?.trim() ? token.trim() : '';
+		let cookies: string[] = []
 
-		if (!activeToken) {
-			activeToken = await this.siteInitialize();
-		}
+
+		if (!cookies) {
+			cookies = await this.siteInitialize();
+    }
+		let activeToken = token?.trim() ? token.trim() :this.extractSessionId(cookies);
 
 		let response = await this.executeCommand<
-			LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
-		>('gameList', activeToken ? { before_token: activeToken } : {});
+			LuckyBetGameItem[] | { games?: {[x: string]:LuckyBetGameItem}; list?: LuckyBetGameItem[] }
+		>('getGameList', activeToken ? { 'before-token': activeToken } : {});
 
-		// Si falló y no era un token custom de usuario, intentar refrescar el before_token una vez
+    // Si falló y no era un token custom de usuario, intentar refrescar el before_token una vez
 		if (response.status !== 'success' && !token?.trim()) {
 			await this.cache.del(LUCKYBET_BEFORE_TOKEN_CACHE_KEY);
-			activeToken = await this.siteInitialize();
+      cookies = await this.siteInitialize();
+      activeToken = this.extractSessionId(cookies);
 			response = await this.executeCommand<
-				LuckyBetGameItem[] | { gameList?: LuckyBetGameItem[]; list?: LuckyBetGameItem[] }
-			>('gameList', activeToken ? { token: activeToken } : {});
+				LuckyBetGameItem[] | { games?: {[x: string]:LuckyBetGameItem}; list?: LuckyBetGameItem[] }
+			>('getGameList', activeToken ? { 'before-token': activeToken } : {});
 		}
 
 		let games: LuckyBetGameItem[] = [];
@@ -211,10 +233,10 @@ export class UserPanelService implements ForUserPanel {
 				games = response.content;
 			} else if (
 				!Array.isArray(response.content) &&
-				response.content.gameList &&
-				Array.isArray(response.content.gameList)
-			) {
-				games = response.content.gameList;
+				response.content.games
+      ) {
+
+				 games = Object.values(response.content.games) ;
 			} else if (Array.isArray(response.content.list)) {
 				games = response.content.list;
 			}
