@@ -1,6 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
+import { playerSchema } from '@/src/players/app/dto/player.schema';
+import { roomBasicSchema } from '@/src/rooms/app/dto/room.schema';
+import { userSchema } from '@/src/users/app/dto/user.schema';
 import { chestBasicSchema } from '../../../chests/app/dto/chest.schema';
 import { ChestPeriodType } from '../../../chests/app/enums';
 import { type RewardAction, RewardStatus } from '../../../rewards/app/enums';
@@ -57,15 +60,19 @@ export const playerChestProgressSchema = z.object({
 export const userMissionChestSchema = z.object({
 	id: z.number().int(),
 	playerId: z.number().int(),
+	player: playerSchema.optional(),
 	chestId: z.number().int(),
+	chest: chestBasicSchema.optional(),
 	periodKey: z.string(),
 	completedMissionsCount: z.number().int(),
 	coinsAmount: z.number().int(),
+	room: roomBasicSchema.optional(),
 	roomId: z.number().int().nullable().optional(),
 	status: z.enum(RewardStatus),
 	externalOperationId: z.string().nullable().optional(),
 	errorMessage: z.string().nullable().optional(),
 	resolvedByAdminId: z.number().int().nullable().optional(),
+	resolvedByAdmin: userSchema.optional(),
 	claimedAt: zDateHelper.nullable().optional(),
 	createdAt: zDateHelper.optional(),
 	updatedAt: zDateHelper.optional(),

@@ -53,7 +53,6 @@ describe('PlayerChestsCore', () => {
 			acquireClaimLock: jest.fn(),
 			updateStatus: jest.fn(),
 			getPlayerChests: jest.fn(),
-			findUncertainClaims: jest.fn(),
 		};
 
 		mockChestsCore = {
@@ -80,6 +79,8 @@ describe('PlayerChestsCore', () => {
 
 		mockPanelApi = {
 			authenticatePlayer: jest.fn(),
+			getGameList: jest.fn(),
+			getProviders: jest.fn(),
 			syncOrRegisterPlayer: jest.fn(),
 			getLastPlayedGames: jest.fn(),
 			getLastPlayedGame: jest.fn(),
@@ -106,7 +107,6 @@ describe('PlayerChestsCore', () => {
 			findByName: jest.fn(),
 			updateRoom: jest.fn(),
 			getRooms: jest.fn(),
-			findActiveRooms: jest.fn(),
 		};
 
 		core = new PlayerChestsCore(

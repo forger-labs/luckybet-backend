@@ -41,7 +41,7 @@ export const updateMissionSchema = z.object({
 		.min(0, validationMissionMessages.experiencePoints.min)
 		.optional()
 		.describe(validationMissionMessages.experiencePoints.describe),
-	missionSteps: z
+	steps: z
 		.array(createMissionStepSchema)
 		.max(50, validationMissionMessages.missionSteps.max)
 		.optional()

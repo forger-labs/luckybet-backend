@@ -1,6 +1,6 @@
 # Especificación de Integración de la API (Frontend / Clientes)
 
-> Guía exhaustiva y técnica para el equipo de frontend. Contiene **todos** los endpoints, métodos HTTP, cabeceras requeridas, tokens de autorización, formato de contenido (`application/json` vs `multipart/form-data`) y los esquemas literales de JSON completos para cada petición (Request Body / Query Params) y respuesta (Response Body).
+> Guía exhaustiva y técnica para el equipo de frontend y clientes API. Contiene **todos** los endpoints de los 13 módulos del sistema, sus métodos HTTP, cabeceras requeridas, tokens de autorización, formato de contenido (`application/json` vs `multipart/form-data`) y los esquemas literales de JSON completos para cada petición (Request Body / Query Params) y respuesta (Response Body).
 
 ---
 
@@ -15,7 +15,7 @@ Todos los endpoints del backend responden bajo una de estas dos estructuras est�
 {
   "status": true,
   "message": "Mensaje descriptivo del resultado",
-  "data": { ... } // Objeto del recurso
+  "data": { ... } // Objeto del recurso solicitado
 }
 ```
 
@@ -24,12 +24,12 @@ Todos los endpoints del backend responden bajo una de estas dos estructuras est�
 {
   "status": true,
   "message": "Mensaje descriptivo del resultado",
-  "data": [ ... ], // Arreglo de elementos
+  "data": [ ... ], // Arreglo de elementos paginados
   "meta": {
-    "total": 120,        // Total global de registros que coinciden con los filtros
-    "totalPages": 6,     // Total de páginas calculadas
+    "total": 120,        // Total global de registros que cumplen los filtros
+    "totalPages": 3,     // Total de páginas calculadas
     "page": 1,           // Página actual (1-indexed)
-    "limit": 20,         // Registros por página solicitados (take)
+    "limit": 50,         // Registros por página solicitados (take)
     "hasPreviousPage": false,
     "hasNextPage": true
   }
@@ -49,12 +49,13 @@ Todos los endpoints del backend responden bajo una de estas dos estructuras est�
 
 ### 1.2 Mecanismos de Autenticación y Tokens
 
-Existen **dos tokens completamente distintos** según el tipo de cliente:
+Existen **dos universos de tokens completamente independientes** según el rol del cliente:
 
 | Tipo de Token | ¿Quién lo usa? | Tipo de Cabecera / Transporte | Cómo se obtiene |
 | :--- | :--- | :--- | :--- |
 | **Admin JWT** | Administradores (`SUPER_ADMIN`, `REVIEWER`) | **Cookie HTTP-only** llamada `accessToken` enviada automáticamente por el navegador en cada request (`credentials: 'include'` en `fetch` o `withCredentials: true` en `axios`). | Al llamar a `POST /api/v1.0/auth/login`. |
-| **Player Token** | Jugadores finales de LuckyBet | **Header HTTP**: `Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`. Alternativamente vía query param: `?token=<playerToken>`. | Es el token de sesión de la plataforma LuckyBet (PHP) obtenido cuando el jugador inicia sesión en el sitio. |
+| **Player Token** | Jugadores finales de LuckyBet | **Header HTTP**: `Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`. Alternativamente vía query param: `?token=<playerToken>`. | Es el token de sesión emitido por la plataforma LuckyBet (PHP) al iniciar sesión el jugador. |
+| **Público** | Cualquier cliente | Ninguno. | Rutas de catálogo y salud (`/health`, `/panel/games`, `/panel/providers`, `/rooms/active`, `/levels`). |
 
 ---
 
@@ -64,15 +65,17 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 ### 2.1 Módulo: `Auth` (`/api/v1.0/auth`)
 
+Controlador: `AuthController`
+
 #### `POST /api/v1.0/auth/login`
-- **Propósito**: Autentica a un usuario administrador. Setea la cookie segura `accessToken`.
+- **Propósito**: Autentica a un usuario administrador. Setea la cookie segura HTTP-only `accessToken`.
 - **Tipo de Contenido**: `application/json`
 - **Autenticación / Token**: Pública (Ninguno).
 - **Body de Entrada (JSON)**:
   ```json
   {
     "username": "adminUser",  // string, obligatorio, min: 3, max: 20
-    "password": "miPassword"  // string, obligatorio, min: 6, max: 50
+    "password": "secretPassword123" // string, obligatorio, min: 6, max: 50
   }
   ```
 - **Respuesta (`200 OK`)**:
@@ -93,7 +96,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 #### `POST /api/v1.0/auth/logout`
-- **Propósito**: Destruye la sesión activa del administrador limpiando la cookie `accessToken`.
+- **Propósito**: Cierra la sesión activa del administrador limpiando la cookie `accessToken`.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
 - **Respuesta (`200 OK`)**:
@@ -126,8 +129,10 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 ### 2.2 Módulo: `Users` (`/api/v1.0/users`)
 
+Controlador: `UsersController`
+
 #### `POST /api/v1.0/users`
-- **Propósito**: Crea un nuevo usuario administrador.
+- **Propósito**: Registra un nuevo usuario con permisos administrativos.
 - **Tipo de Contenido**: `application/json`
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
 - **Body de Entrada (JSON)**:
@@ -185,9 +190,9 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 #### `GET /api/v1.0/users/:id`
-- **Propósito**: Detalle de un usuario administrador.
-- **Parámetros de Ruta**: `id` (integer).
+- **Propósito**: Consulta un administrador por su ID.
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
+- **Parámetros de Ruta**: `id` (integer).
 - **Respuesta (`200 OK`)**: Retorna `{ status, message, data: { id, username, role, isActive } }`.
 
 #### `PATCH /api/v1.0/users/:id`
@@ -198,9 +203,9 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 - **Body de Entrada (JSON)**:
   ```json
   {
-    "username": "adminRenombrado", // opcional
-    "role": "SUPER_ADMIN",          // opcional
-    "isActive": false               // opcional
+    "username": "adminRenombrado", // string, opcional
+    "role": "SUPER_ADMIN",          // enum: "SUPER_ADMIN" | "REVIEWER", opcional
+    "isActive": false               // boolean, opcional
   }
   ```
 - **Respuesta (`200 OK`)**: Retorna el usuario actualizado en `data`.
@@ -208,6 +213,8 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ---
 
 ### 2.3 Módulo: `Panel` (`/api/v1.0/panel`)
+
+Controlador: `PanelController`
 
 #### `GET /api/v1.0/panel/games`
 - **Propósito**: Catálogo completo de juegos disponibles en LuckyBet (enriquecido con imágenes y proveedores, obtenido mediante `siteInitialize` con `before_token` y cacheado en Redis por 24 horas).
@@ -220,12 +227,15 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
     "message": "Lista de juegos obtenida",
     "data": [
       {
-        "id": "104",
+        "id": 104,
         "name": "sweet_bonanza",
         "title": "Sweet Bonanza",
         "provider": "Pragmatic Play",
         "label": "Pragmatic Play",
-        "img": "https://cdn.luckybet.site/games/sweet_bonanza.png"
+        "img": "/resources/sitepics/games/sweet_bonanza.png",
+        "category": "slots",
+        "type": "html5",
+        "bonus": "1"
       }
     ]
   }
@@ -260,6 +270,8 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ---
 
 ### 2.4 Módulo: `Players` (`/api/v1.0/players`)
+
+Controlador: `PlayersController`
 
 #### `POST /api/v1.0/players`
 - **Propósito**: Registro administrativo manual de un jugador.
@@ -304,7 +316,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
 - **Query Params**:
-  - `username` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas.
+  - `username` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas (`ILike`).
   - `phone` *(string, opcional)*: Búsqueda parcial por teléfono.
   - `levelId` *(number, opcional)*: Filtrar por ID de nivel exacto.
   - `minExperience` *(number, opcional)*: Experiencia mínima (`>=`).
@@ -387,7 +399,8 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 #### `GET /api/v1.0/players/me/last-game`
 - **Propósito**: Consulta la última partida jugada o la sesión activa en LuckyBet.
-- **Autenticación / Token**: **Player Token**.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -404,15 +417,16 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 #### `GET /api/v1.0/players/me/games`
-- **Propósito**: Historial deduplicado de partidas jugadas con imágenes del catálogo.
-- **Autenticación / Token**: **Player Token**.
+- **Propósito**: Historial deduplicado de partidas jugadas en LuckyBet, enriquecido con imágenes del catálogo.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
 - **Query Params**:
-  - `days` *(number, opcional)*: Días a consultar hacia atrás.
-  - `limit` *(number, opcional)*: Límite de partidas.
-  - `from` *(string ISO, opcional)*: Ej: `2026-09-01`.
-  - `to` *(string ISO, opcional)*: Ej: `2026-09-24`.
-  - `provider` *(string, opcional)*: Filtrar por proveedor (ej: `Pragmatic Play`).
-  - `gameName` *(string, opcional)*: Filtrar por nombre de juego.
+  - `days` *(number, opcional)*: Días a consultar hacia atrás (default: 7).
+  - `limit` *(number, opcional)*: Límite de partidas (default: 10).
+  - `from` *(string ISO, opcional)*: Ej: `"2026-09-01"`.
+  - `to` *(string ISO, opcional)*: Ej: `"2026-09-24"`.
+  - `provider` *(string, opcional)*: Filtrar por proveedor.
+  - `gameName` *(string, opcional)*: Filtrar por nombre del juego.
   - `forceRefresh` *(boolean, opcional)*: Saltear caché de Redis y consultar LuckyBet en vivo.
 - **Respuesta (`200 OK`)**:
   ```json
@@ -420,15 +434,19 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
     "status": true,
     "message": "Historial de juegos obtenido exitosamente",
     "data": {
+      "userId": 10,
+      "periodDays": 7,
+      "from": "2026-09-17",
+      "to": "2026-09-24",
       "games": [
         {
           "gameId": "sweet_bonanza",
           "gameName": "Sweet Bonanza",
           "provider": "Pragmatic Play",
           "imageUrl": "https://cdn.luckybet.site/games/sweet_bonanza.png",
-          "roundsPlayed": 15,
-          "totalBet": 75.0,
-          "lastPlayedAt": "2026-09-24T18:30:00.000Z"
+          "lastPlayedAt": "2026-09-24 18:30:00",
+          "totalBetInPeriod": 75.0,
+          "playCount": 15
         }
       ],
       "totalUniqueGames": 1
@@ -436,25 +454,36 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   }
   ```
 
-#### `GET /api/v1.0/players/:id` y `PATCH /api/v1.0/players/:id`
-- **Propósito**: Consulta y edición de jugadores por administradores.
-- **Autenticación**: **Admin JWT** (Cookie `accessToken`).
-- **Body de Entrada para PATCH (`application/json`)**:
+#### `GET /api/v1.0/players/:id`
+- **Propósito**: Obtiene un jugador por su ID interno.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
+- **Parámetros de Ruta**: `id` (integer).
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: PlayerResponseDto }`.
+
+#### `PATCH /api/v1.0/players/:id`
+- **Propósito**: Actualiza datos de un jugador (teléfono, sala, nivel, estado activo).
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`).
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
   ```json
   {
-    "phone": "+584129999999", // opcional
-    "isActive": true,          // opcional
-    "levelId": 2,              // opcional
-    "roomId": 3                // opcional
+    "phone": "+584129999999", // string, opcional, nullable
+    "isActive": true,          // boolean, opcional
+    "levelId": 2,              // number, opcional, nullable
+    "roomId": 3                // number, opcional, nullable
   }
   ```
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: PlayerResponseDto }`.
 
 ---
 
 ### 2.5 Módulo: `Levels` (`/api/v1.0/levels`)
 
+Controlador: `LevelsController`
+
 #### `GET /api/v1.0/levels`
-- **Propósito**: Catálogo público de niveles.
+- **Propósito**: Catálogo público de niveles ordenados por experiencia mínima.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: Pública.
 - **Query Params**:
@@ -464,7 +493,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   - `roomId` *(number, opcional)*: Filtrar por sala promocional.
   - `minCoins` / `maxCoins` *(number, opcional)*
   - `minExperience` / `maxExperience` *(number, opcional)*
-  - `sortOrder` *(enum: `ASC` | `DESC`, default: `ASC`)*
+  - `sortOrder` *(enum: `"ASC"` | `"DESC"`, default: `"ASC"`)*
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -496,21 +525,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 - **Propósito**: Ficha de un nivel por su ID.
 - **Autenticación / Token**: Pública.
 - **Parámetros de Ruta**: `id` (integer).
-- **Respuesta (`200 OK`)**: 
-  ```json
-  { 
-    "status": true, 
-    "message": "",
-    "data": {
-      "id": 3,
-      "name": "Oro",
-      "image": "https://cdn.example.com/levels/uuid-oro.png",
-      "minExperience": 1500,
-      "coins": 2500,
-      "roomId": 5 
-    } 
-  }
-  ```.
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: LevelResponseDto }`.
 
 #### `POST /api/v1.0/levels`
 - **Propósito**: Crea un nuevo nivel con imagen y sala promocional opcional.
@@ -550,6 +565,8 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 ### 2.6 Módulo: `Rooms` (`/api/v1.0/rooms`)
 
+Controlador: `RoomsController`
+
 #### `GET /api/v1.0/rooms/active`
 - **Propósito**: Listado público de salas con bono disponibles.
 - **Tipo de Contenido**: Sin cuerpo.
@@ -578,18 +595,21 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 #### `GET /api/v1.0/rooms`
 - **Propósito**: Listado administrativo filtrado y paginado de salas.
+- **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
 - **Query Params**:
-  - `name` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas.
+  - `name` *(string, opcional)*: Búsqueda parcial.
   - `bonus` *(enum, opcional)*: `"0"` | `"30"` | `"40"` | `"50"` | `"100"` | `"150"` | `"200"`.
   - `isActive` *(boolean, opcional)*.
-  - `take` *(number, default: 50)*.
+  - `take` *(number, default: 50, max: 100)*.
   - `skip` *(number, default: 0)*.
-- **Respuesta (`200 OK`)**: Array paginado de salas con `meta`.
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado de salas con `meta`.
 
 #### `GET /api/v1.0/rooms/:id`
 - **Propósito**: Detalle de una sala por ID.
-- **Autenticación / Token**: **Admin JWT**.
+- **Autenticación / Token**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
+- **Parámetros de Ruta**: `id` (integer).
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: RoomResponseDto }`.
 
 #### `POST /api/v1.0/rooms`
 - **Propósito**: Registra una sala asociada a un senior en LuckyBet.
@@ -619,34 +639,55 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   }
   ```
 
-#### `PATCH /api/v1.0/rooms/:id` y `PATCH /api/v1.0/rooms/:id/status`
-- **Propósito**: Edición de nombre/bono o activación/desactivación de la sala.
+#### `PATCH /api/v1.0/rooms/:id`
+- **Propósito**: Actualiza nombre o porcentaje de bono de una sala.
 - **Tipo de Contenido**: `application/json`
-- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, rol `SUPER_ADMIN`).
-- **Body para PATCH status**: `{ "isActive": false }`.
+- **Autenticación / Token**: **Admin JWT** (rol `SUPER_ADMIN`).
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "name": "SeniorNombreNuevo", // string, opcional
+    "bonus": "150"              // enum, opcional
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna la sala actualizada en `data`.
+
+#### `PATCH /api/v1.0/rooms/:id/status`
+- **Propósito**: Activa o desactiva la disponibilidad de la sala.
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT** (rol `SUPER_ADMIN`).
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "isActive": false
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna la sala actualizada en `data`.
 
 ---
 
 ### 2.7 Módulo: `Missions` (`/api/v1.0/missions`)
 
-#### A. Endpoints para Jugadores (Frontend Cliente)
+Controladores: `MissionsController` (Administración) y `PlayerMisionesController` (Jugadores)
+
+#### A. Endpoints para Jugadores
 
 ##### `GET /api/v1.0/missions`
-- **Propósito**: Catálogo filtrado y paginado de misiones con ordenamiento cronológico.
+- **Propósito**: Catálogo filtrado y paginado de misiones disponibles con ordenamiento cronológico.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: Pública o con Player Token / Cookie Admin.
 - **Query Params**:
-  - `title` *(string, opcional)*: Búsqueda parcial insensible a mayúsculas/minúsculas (`ILike`).
-  - `type` *(enum: `"DAILY"` | `"WEEKLY"` | `"FIXED"`, opcional)*: Tipo de misión.
-  - `status` *(enum: `"INACTIVE"` | `"ACTIVE"` | `"COMPLETED"` | `"CANCELLED"`, opcional)*: Estado de la misión.
+  - `title` *(string, opcional)*: Búsqueda parcial (`ILike`).
+  - `type` *(enum: `"DAILY"` | `"WEEKLY"` | `"FIXED"`, opcional)*.
+  - `status` *(enum: `"INACTIVE"` | `"ACTIVE"` | `"COMPLETED"` | `"CANCELLED"`, opcional)*.
   - `roomId` *(number, opcional)*: Filtrar por sala promocional asignada.
-  - `minCoins` *(number, opcional)*: Monedas mínimas (`>=`).
-  - `maxCoins` *(number, opcional)*: Monedas máximas (`<=`).
-  - `minExperience` *(number, opcional)*: Puntos de exp mínimos (`>=`).
-  - `maxExperience` *(number, opcional)*: Puntos de exp máximos (`<=`).
-  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*: Orden por fecha de creación (`created_at`).
-  - `take` *(number, default: 50, max: 100)*: Cantidad de registros por página.
-  - `skip` *(number, default: 0)*: Offset de paginación.
+  - `minCoins` / `maxCoins` *(number, opcional)*: Rango de monedas.
+  - `minExperience` / `maxExperience` *(number, opcional)*: Rango de experiencia.
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*: Orden por `created_at`.
+  - `take` *(number, default: 50, max: 100)*: Límite por página.
+  - `skip` *(number, default: 0)*: Offset.
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -670,25 +711,18 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
             "id": 10,
             "missionId": 1,
             "stepOrder": 1,
-            "type": "GAME_PLAY",
+            "type": "GAME_PLAY", // "IMAGE" | "TEXT" | "GAME_PLAY"
             "content": "Juega al menos 5 rondas",
             "targetConfig": {
               "provider": "Pragmatic Play",
-              "gameId": "sweet_bonanza",
-              "minUniqueGames": 1
+              "minUniqueGames": 1,
+              "minBet": 1
             }
           }
         ]
       }
     ],
-    "meta": {
-      "total": 1,
-      "totalPages": 1,
-      "page": 1,
-      "limit": 50,
-      "hasPreviousPage": false,
-      "hasNextPage": false
-    }
+    "meta": { "total": 1, "totalPages": 1, "page": 1, "limit": 50, "hasPreviousPage": false, "hasNextPage": false }
   }
   ```
 
@@ -706,7 +740,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
       "id": 15,
       "playerId": 10,
       "missionId": 1,
-      "status": "IN_PROGRESS", // "IN_PROGRESS" | "COMPLETED" | "EXPIRED" | "CANCELLED"
+      "status": "IN_PROGRESS",
       "currentStep": 1,
       "startedAt": "2026-09-24T14:00:00.000Z",
       "completedAt": null
@@ -717,11 +751,11 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ##### `POST /api/v1.0/missions/user-missions/:userMissionId/steps/:stepId/submit`
 - **Propósito**: Envía la evidencia para un paso de tipo `TEXT` o `IMAGE`. Si todos los pasos se completan, genera automáticamente el registro en `mission_rewards` con estado `PENDING`.
 - **Tipo de Contenido**: `multipart/form-data`
-- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`). Valida pertenencia del jugador.
+- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
 - **Parámetros de Ruta**: `userMissionId` (integer), `stepId` (integer).
 - **Campos del Formulario (`multipart/form-data`)**:
-  - `submissionText` *(string, opcional si el paso es TEXT)*: Texto ingresado por el usuario.
-  - `submissionImage` *(binary file, opcional si el paso es IMAGE)*: Archivo de captura (JPEG, PNG o WebP, máx 5 MiB).
+  - `submissionText` *(string, opcional si el paso es TEXT)*: Texto ingresado.
+  - `submissionImage` *(binary file, opcional si el paso es IMAGE)*: Captura (JPEG, PNG o WebP, máx 5 MiB).
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -731,7 +765,7 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
       "id": 25,
       "userMissionId": 15,
       "missionStepId": 10,
-      "status": "APPROVED", // "PENDING" | "APPROVED" | "REJECTED"
+      "status": "APPROVED",
       "submissionText": "Usuario de prueba",
       "submissionImageUrl": "https://cdn.example.com/missions/uuid-captura.png",
       "reviewedById": null,
@@ -766,53 +800,34 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   ```
 
 ##### `GET /api/v1.0/missions/my-missions`
-- **Propósito**: Misiones en curso y completadas del jugador autenticado.
+- **Propósito**: Misiones en las que está participando o ha participado el jugador autenticado, con soporte de filtros y ordenamiento.
 - **Tipo de Contenido**: Sin cuerpo.
-- **Autenticación / Token**: **Player Token**.
-- **Query Params**: `take` (default 100), `skip` (default 0).
-- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: UserMissionBasic[], meta }`.
+- **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
+- **Query Params**:
+  - `status` *(enum: `"IN_PROGRESS"` | `"COMPLETED"` | `"EXPIRED"` | `"CANCELLED"`, opcional)*.
+  - `missionId` *(number, opcional)*: Filtrar por ID de plantilla de misión.
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*: Orden por fecha de creación (`created_at`).
+  - `take` *(number, default: 50, max: 100)*.
+  - `skip` *(number, default: 0)*.
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado de `userMissionSchema` con `meta`.
 
 ##### `GET /api/v1.0/missions/user-missions/:userMissionId`
 - **Propósito**: Progreso detallado y lista de pasos de una misión del jugador.
 - **Tipo de Contenido**: Sin cuerpo.
 - **Autenticación / Token**: **Player Token**.
 - **Parámetros de Ruta**: `userMissionId` (integer).
-- **Respuesta (`200 OK`)**:
-  ```json
-  {
-    "status": true,
-    "message": "Mision obtenida exitosamente",
-    "data": {
-      "id": 15,
-      "playerId": 10,
-      "missionId": 1,
-      "status": "IN_PROGRESS",
-      "currentStep": 2,
-      "startedAt": "2026-09-24T14:00:00.000Z",
-      "completedAt": null,
-      "steps": [
-        {
-          "id": 25,
-          "userMissionId": 15,
-          "missionStepId": 10,
-          "status": "APPROVED",
-          "submissionText": "Usuario de prueba",
-          "submissionImageUrl": null
-        }
-      ]
-    }
-  }
-  ```
+- **Respuesta (`200 OK`)**: Retorna la misión de usuario con el arreglo de sus pasos y URLs públicas de las evidencias en `data`.
 
 ---
 
 #### B. Endpoints Administrativos de Misiones
 
 ##### `POST /api/v1.0/missions`
+- **Propósito**: Crea una nueva plantilla de misión con pasos de verificación.
 - **Tipo de Contenido**: `multipart/form-data`
-- **Autenticación**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Autenticación**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
 - **Campos del Formulario (`multipart/form-data`)**:
-  - `title` *(string, requerido)*: Título de la misión.
+  - `title` *(string, requerido)*: Título.
   - `description` *(string, opcional)*: Descripción.
   - `type` *(enum, requerido)*: `"DAILY"` | `"WEEKLY"` | `"FIXED"`.
   - `coinsAmount` *(number, requerido)*: Fichas de premio.
@@ -825,11 +840,11 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
       {
         "stepOrder": 1,
         "type": "GAME_PLAY", // "IMAGE" | "TEXT" | "GAME_PLAY"
-        "content": "Juega al menos 5 rondas",
+        "content": "Juega al menos a 2 juegos distintos de Pragmatic",
         "targetConfig": {
           "provider": "Pragmatic Play",
-          "gameId": "sweet_bonanza",
-          "minUniqueGames": 1
+          "minUniqueGames": 2,
+          "minBet": 5
         }
       }
     ]
@@ -839,10 +854,11 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ##### `GET /api/v1.0/missions/admin/review-queue`
 - **Propósito**: Cola de pasos manuales pendientes de revisión humana por los administradores.
 - **Autenticación**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
-- **Query Params**: `status`, `playerId`, `experience`, `coinsAmount`, `type`, `take`, `skip`.
+- **Query Params**: `status`, `playerId`, `experience`, `coinsAmount`, `type`, `take` (max 100), `skip`.
 - **Respuesta (`200 OK`)**: Retorna las misiones agrupadas por jugador con sus evidencias en `data`.
 
 ##### `POST /api/v1.0/missions/admin/steps/:stepId/review`
+- **Propósito**: Aprueba o rechaza la evidencia manual enviada por un jugador.
 - **Tipo de Contenido**: `application/json`
 - **Autenticación**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
 - **Parámetros de Ruta**: `stepId` (integer, ID del paso de usuario).
@@ -854,6 +870,12 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
   }
   ```
 - **Respuesta (`200 OK`)**: Retorna el paso evaluado en `data`.
+
+##### `GET /api/v1.0/missions/:id`
+- **Propósito**: Obtiene una plantilla de misión por su ID.
+- **Autenticación**: Pública / Admin JWT.
+- **Parámetros de Ruta**: `id` (integer).
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: MissionResponseDto }`.
 
 ##### `PATCH /api/v1.0/missions/:id`
 - **Propósito**: Actualiza la configuración de una misión y/o reemplaza atómicamente sus pasos. Solo permitido si la misión se encuentra en estado `INACTIVE`. (Las imágenes se modifican exclusivamente en los endpoints dedicados de imagen).
@@ -889,15 +911,32 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 ##### `POST /api/v1.0/missions/:id/activate`
 - **Propósito**: Activa una misión en estado `INACTIVE`. Fija automáticamente fecha de expiración según el tipo (`DAILY`: 24h, `WEEKLY`: 7 días).
 - **Autenticación**: **Admin JWT**.
+- **Parámetros de Ruta**: `id` (integer).
+- **Respuesta (`200 OK`)**: Retorna la misión activada en `data`.
+
+##### `PATCH /api/v1.0/missions/:id/status`
+- **Propósito**: Modifica el estado de una misión (`ACTIVE`, `INACTIVE`, `COMPLETED`, `CANCELLED`).
+- **Tipo de Contenido**: `application/json`
+- **Autenticación**: **Admin JWT**.
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "status": "COMPLETED"
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna la misión actualizada en `data`.
 
 ##### `POST /api/v1.0/missions/:id/image` y `DELETE /api/v1.0/missions/:id/image`
 - **Propósito**: Reemplazo o eliminación de la imagen de la misión.
-- **POST Content-Type**: `multipart/form-data` con campo `file`.
+- **POST Content-Type**: `multipart/form-data` con campo `file` (binary).
 - **Autenticación**: **Admin JWT**.
 
 ---
 
 ### 2.8 Módulo: `Rewards` (`/api/v1.0/rewards`)
+
+Controlador: `RewardsController`
 
 #### `GET /api/v1.0/rewards`
 - **Propósito**: Historial y recompensas de misiones del jugador autenticado. Permite consultar pendientes pasando `?status=PENDING`, filtrar por misión y ordenar cronológicamente.
@@ -999,41 +1038,106 @@ Existen **dos tokens completamente distintos** según el tipo de cliente:
 
 ### 2.9 Módulo: `Chests` (`/api/v1.0/chests`)
 
-Catálogo administrativo de cofres semanales y mensuales.
+Controlador: `ChestsController`
 
 #### `GET /api/v1.0/chests`
-- **Autenticación**: **Admin JWT**.
-- **Query Params**: `take`, `skip`, `periodType` (`WEEKLY` | `MONTHLY`), `isActive`.
-- **Respuesta (`200 OK`)**: Array paginado de cofres configurados con `requiredMissions`, `coinsAmount`, `experiencePoints`, `roomId`.
+- **Propósito**: Listado administrativo filtrado y paginado del catálogo de cofres.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `title` *(string, opcional)*: Búsqueda por título.
+  - `periodType` *(enum: `"WEEKLY"` | `"MONTHLY"`, opcional)*.
+  - `isActive` *(boolean, opcional)*.
+  - `take` *(number, default: 50, max: 100)*.
+  - `skip` *(number, default: 0)*.
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Listado de cofres obtenido exitosamente",
+    "data": [
+      {
+        "id": 1,
+        "title": "Cofre Semanal de Bronce",
+        "description": "Completa 5 misiones esta semana",
+        "periodType": "WEEKLY",
+        "requiredMissions": 5,
+        "coinsAmount": 500,
+        "roomId": 2,
+        "experiencePoints": 100,
+        "imageUrl": "https://cdn.example.com/chests/semanal.png",
+        "isActive": true
+      }
+    ],
+    "meta": { "total": 1, "totalPages": 1, "page": 1, "limit": 50, "hasPreviousPage": false, "hasNextPage": false }
+  }
+  ```
+
+#### `GET /api/v1.0/chests/:id`
+- **Propósito**: Ficha de un cofre por ID.
+- **Autenticación / Token**: **Admin JWT**.
+- **Parámetros de Ruta**: `id` (integer).
+- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: ChestResponseDto }`.
 
 #### `POST /api/v1.0/chests`
+- **Propósito**: Crea un nuevo cofre con meta de misiones.
 - **Tipo de Contenido**: `multipart/form-data`
-- **Autenticación**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
+- **Autenticación / Token**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
 - **Campos del Formulario (`multipart/form-data`)**:
   - `title` *(string, requerido)*: Título del cofre.
   - `description` *(string, opcional)*: Descripción.
   - `periodType` *(enum, requerido)*: `"WEEKLY"` | `"MONTHLY"`.
-  - `requiredMissions` *(number, requerido)*: Misiones mínimas requeridas en el periodo.
+  - `requiredMissions` *(number, requerido)*: Misiones mínimas requeridas.
   - `coinsAmount` *(number, requerido)*: Fichas otorgadas.
   - `experiencePoints` *(number, requerido)*: Puntos de exp otorgados.
   - `roomId` *(number, opcional)*: ID de sala promocional.
   - `isActive` *(boolean, opcional, default: true)*.
-  - `image` *(binary file, opcional)*: Archivo de imagen (PNG o JPEG).
+  - `image` *(binary file, opcional)*: Imagen ilustrativa (PNG o JPEG, máx 5 MiB).
 - **Respuesta (`201 Created`)**: Retorna el cofre creado en `data`.
 
 #### `PATCH /api/v1.0/chests/:id`
+- **Propósito**: Actualiza campos del cofre.
 - **Tipo de Contenido**: `application/json`
-- **Autenticación**: **Admin JWT**.
-- **Body de Entrada (JSON)**: Campos opcionales (`title`, `description`, `periodType`, `requiredMissions`, `coinsAmount`, `roomId`, `experiencePoints`, `isActive`).
+- **Autenticación / Token**: **Admin JWT**.
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "title": "Nuevo Título",          // opcional
+    "description": "Nueva desc",       // opcional
+    "periodType": "WEEKLY",           // opcional
+    "requiredMissions": 8,            // opcional
+    "coinsAmount": 800,               // opcional
+    "roomId": 3,                      // opcional, nullable
+    "experiencePoints": 150,          // opcional
+    "isActive": true                  // opcional
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna el cofre actualizado en `data`.
 
 #### `POST /api/v1.0/chests/:id/image` y `DELETE /api/v1.0/chests/:id/image`
 - **Propósito**: Sube/reemplaza o elimina la imagen del cofre.
-- **POST Content-Type**: `multipart/form-data` con campo `file`.
-- **Autenticación**: **Admin JWT**.
+- **POST Content-Type**: `multipart/form-data` con campo `file` (binary).
+- **Autenticación / Token**: **Admin JWT**.
+
+#### `PATCH /api/v1.0/chests/:id/status`
+- **Propósito**: Activa o desactiva la disponibilidad de un cofre.
+- **Tipo de Contenido**: `application/json`
+- **Autenticación / Token**: **Admin JWT**.
+- **Parámetros de Ruta**: `id` (integer).
+- **Body de Entrada (JSON)**:
+  ```json
+  {
+    "isActive": false
+  }
+  ```
+- **Respuesta (`200 OK`)**: Retorna el cofre actualizado en `data`.
 
 ---
 
 ### 2.10 Módulo: `PlayerChests` (`/api/v1.0/player-chests`)
+
+Controlador: `PlayerChestsController`
 
 #### `GET /api/v1.0/player-chests/progress`
 - **Propósito**: Calcula el progreso en vivo de los cofres activos para el jugador autenticado, optimizado por filtros de periodo o cofre individual.
@@ -1137,11 +1241,11 @@ Catálogo administrativo de cofres semanales y mensuales.
   - `chestId` *(number, opcional)*: Filtrar por cofre.
   - `status` *(enum, opcional)*: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`.
   - `periodKey` *(string, opcional)*: Ej: `"2026-W39"` o `"2026-09"`.
-  - `orderBy` *(enum, default: `created_at`)*: `"created_at"` | `"periodKey"` | `"id"`.
-  - `orderDirection` *(enum, default: `DESC`)*: `"ASC"` | `"DESC"`.
-  - `take` *(number, default: 50)*: Registros por página.
+  - `orderBy` *(enum: `"created_at"` | `"periodKey"` | `"id"`, default: `"created_at"`)*.
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*.
+  - `take` *(number, default: 50, max: 100)*: Registros por página.
   - `skip` *(number, default: 0)*: Offset.
-- **Respuesta (`200 OK`)**: Retorna `{ status, message, data: UserMissionChestBasic[], meta }`.
+- **Respuesta (`200 OK`)**: Retorna arreglo paginado de `userMissionChestSchema` con `meta`.
 
 #### `POST /api/v1.0/player-chests/:chestId/claim`
 - **Propósito**: Reclamo atómico de fichas y experiencia de un cofre desbloqueado en el periodo actual.
@@ -1199,6 +1303,7 @@ Catálogo administrativo de cofres semanales y mensuales.
 - **Propósito**: Resuelve administrativamente un reclamo incierto de cofre.
 - **Tipo de Contenido**: `application/json`
 - **Autenticación / Token**: **Admin JWT** (rol `SUPER_ADMIN`).
+- **Parámetros de Ruta**: `claimId` (integer).
 - **Body de Entrada (JSON)**:
   ```json
   {
@@ -1213,6 +1318,8 @@ Catálogo administrativo de cofres semanales y mensuales.
 
 ### 2.11 Módulo: `LevelRewards` (`/api/v1.0/level-rewards`)
 
+Controlador: `LevelRewardsController`
+
 #### `GET /api/v1.0/level-rewards`
 - **Propósito**: Historial de recompensas por ascenso de nivel del jugador autenticado. Permite consultar pendientes pasando `?status=PENDING`, filtrar por nivel y ordenar en ambas direcciones.
 - **Tipo de Contenido**: Sin cuerpo.
@@ -1220,9 +1327,9 @@ Catálogo administrativo de cofres semanales y mensuales.
 - **Query Params**:
   - `status` *(enum, opcional)*: `"PENDING"` | `"PROCESSING"` | `"CLAIMED"` | `"TIMEOUT_UNCERTAIN"`.
   - `levelId` *(number, opcional)*: Filtrar por nivel.
-  - `orderBy` *(enum, default: `created_at`)*: `"created_at"` | `"levelId"` | `"id"`.
-  - `orderDirection` *(enum, default: `DESC`)*: `"ASC"` | `"DESC"`.
-  - `take` *(number, default: 50)*.
+  - `orderBy` *(enum: `"created_at"` | `"levelId"` | `"id"`, default: `"created_at"`)*.
+  - `orderDirection` *(enum: `"ASC"` | `"DESC"`, default: `"DESC"`)*.
+  - `take` *(number, default: 50, max: 100)*.
   - `skip` *(number, default: 0)*.
 - **Respuesta (`200 OK`)**:
   ```json
@@ -1324,6 +1431,8 @@ Catálogo administrativo de cofres semanales y mensuales.
 ---
 
 ### 2.12 Módulo: `Health` (`/api/v1.0/health`)
+
+Controlador: `HealthController`
 
 #### `GET /api/v1.0/health`
 - **Propósito**: Verificación de salud y disponibilidad del servicio (Liveness probe).

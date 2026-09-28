@@ -116,24 +116,11 @@ export class LevelRewardRepoService implements ForDatabaseLevelRewards {
 			where,
 			order,
 			take: filter?.take ?? 50,
-			skip: filter?.skip ?? 0,
+      skip: filter?.skip ?? 0,
+			relations: {room: true, player: true, level: true, resolvedByAdmin: true}
 		});
 
 		return [list.map(r => this.toBasic(r)), count];
-	}
-
-	async findUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[LevelRewardBasic[], number]> {
-		const [claims, count] = await this.rewardModel.findAndCount({
-			where: { status: RewardStatus.TIMEOUT_UNCERTAIN },
-			relations: { resolvedByAdmin: true, level: true },
-			order: { updated_at: 'DESC' },
-			take: params?.take ?? 50,
-			skip: params?.skip ?? 0,
-		});
-		return [claims.map(c => this.toBasic(c)), count];
 	}
 
 	private toBasic(reward: LevelReward): LevelRewardBasic {

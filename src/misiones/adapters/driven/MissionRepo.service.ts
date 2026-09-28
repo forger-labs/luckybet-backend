@@ -133,7 +133,8 @@ export class MissionRepoService implements ForDatabaseMissions {
 					content: true,
 					id: true,
 					stepOrder: true,
-					type: true,
+          type: true,
+					targetConfig: true,
 				},
 				room: {
 					bonus: true,
@@ -161,7 +162,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 	}
 
 	async updateMission(id: number, data: UpdateMissionData): Promise<MissionBasic | null> {
-		const { missionSteps, ...missionFields } = data;
+		const { steps, ...missionFields } = data;
 
 		return await this.missionModel.manager.transaction(async manager => {
 			const mission = await manager.findOne(Mission, { where: { id } });
@@ -169,13 +170,12 @@ export class MissionRepoService implements ForDatabaseMissions {
 
 			Object.assign(mission, missionFields);
 			const saved = await manager.save(Mission, mission);
-
-			if (missionSteps !== undefined) {
+        if (steps !== undefined) {
 				await manager.delete(MissionStep, { missionId: id });
-				if (missionSteps.length > 0) {
+				if (steps.length > 0) {
 					await manager.save(
 						MissionStep,
-						missionSteps.map(step =>
+						steps.map(step =>
 							manager.create(MissionStep, {
 								missionId: id,
 								stepOrder: step.stepOrder,

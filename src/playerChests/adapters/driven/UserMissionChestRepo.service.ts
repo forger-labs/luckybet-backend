@@ -29,12 +29,13 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 	): Promise<UserMissionChestBasic | null> {
 		const found = await this.claimModel.findOne({
 			where: { playerId, chestId, periodKey },
+			relations: { room: true },
 		});
 		return found ? this.toBasic(found) : null;
 	}
 
 	async findById(id: number): Promise<UserMissionChestBasic | null> {
-		const found = await this.claimModel.findOne({ where: { id } });
+		const found = await this.claimModel.findOne({ where: { id }, relations: {player: {room: true}, room: true} });
 		return found ? this.toBasic(found) : null;
 	}
 
@@ -122,23 +123,41 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 			order,
 			take: filter?.take ?? 50,
 			skip: filter?.skip ?? 0,
+			select: {
+				id: true,
+				playerId: true,
+				chestId: true,
+				periodKey: true,
+				completedMissionsCount: true,
+				coinsAmount: true,
+				roomId: true,
+				status: true,
+				externalOperationId: true,
+				errorMessage: true,
+        resolvedByAdminId: true,
+				claimedAt: true,
+				created_at: true,
+				player: {
+					id: true,
+					username: true,
+				},
+				resolvedByAdmin: {
+					id: true,
+					username: true,
+				},
+				room: { id: true, name: true, bonus: true },
+				chest: {
+					id: true,
+					imageUrl: true,
+					description: true,
+					requiredMissions: true,
+					title: true,
+				},
+			},
+			relations: { player: true, room: true, resolvedByAdmin: true, chest: true },
 		});
 
 		return [list.map(c => this.toBasic(c)), count];
-	}
-
-	async findUncertainClaims(params?: {
-		take?: number;
-		skip?: number;
-	}): Promise<[UserMissionChestBasic[], number]> {
-		const [claims, count] = await this.claimModel.findAndCount({
-			where: { status: RewardStatus.TIMEOUT_UNCERTAIN },
-			relations: { resolvedByAdmin: true, chest: true },
-			order: { updated_at: 'DESC' },
-			take: params?.take ?? 50,
-			skip: params?.skip ?? 0,
-		});
-		return [claims.map(c => this.toBasic(c)), count];
 	}
 
 	private toBasic(claim: UserMissionChest): UserMissionChestBasic {
@@ -157,6 +176,10 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 			claimedAt: claim.claimedAt ? claim.claimedAt.toISOString() : null,
 			createdAt: claim.created_at ? claim.created_at.toISOString() : undefined,
 			updatedAt: claim.updated_at ? claim.updated_at.toISOString() : undefined,
+			chest: claim.chest ? claim.chest : undefined,
+			player: claim.player ? claim.player : undefined,
+			resolvedByAdmin: claim.resolvedByAdmin ? claim.resolvedByAdmin : undefined,
+			room: claim.room ? claim.room : undefined,
 		};
 	}
 }

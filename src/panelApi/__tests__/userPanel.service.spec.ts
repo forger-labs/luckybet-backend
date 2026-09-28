@@ -111,10 +111,10 @@ describe('UserPanelService', () => {
 
 	describe('siteInitialize', () => {
 		it('debe obtener before_token desde caché si existe', async () => {
-			mockCache.get.mockResolvedValue('cached_before_token_123');
+			mockCache.get.mockResolvedValue(['PHPSESSID=cached_before_token_123']);
 
 			const token = await service.siteInitialize();
-			expect(token).toBe('cached_before_token_123');
+			expect(token).toEqual(['PHPSESSID=cached_before_token_123']);
 			expect(mockAxios.post).not.toHaveBeenCalled();
 		});
 
@@ -127,13 +127,16 @@ describe('UserPanelService', () => {
 						before_token: 'new_before_token_456',
 					},
 				},
+				headers: {
+					'set-cookie': ['PHPSESSID=new_before_token_456; path=/'],
+				},
 			});
 
 			const token = await service.siteInitialize();
-			expect(token).toBe('new_before_token_456');
+			expect(token).toEqual(['PHPSESSID=new_before_token_456; path=/']);
 			expect(mockCache.set).toHaveBeenCalledWith(
 				LUCKYBET_BEFORE_TOKEN_CACHE_KEY,
-				'new_before_token_456',
+				['PHPSESSID=new_before_token_456; path=/'],
 				86_400,
 			);
 		});
@@ -228,12 +231,16 @@ describe('UserPanelService', () => {
 						status: 'success',
 						content: { before_token: 'auto_token_777' },
 					},
+					headers: {
+						'set-cookie': ['PHPSESSID=auto_token_777; path=/'],
+					},
 				})
 				.mockResolvedValueOnce({
 					data: {
 						status: 'success',
 						content: apiGames,
 					},
+					headers: {},
 				});
 
 			const games = await service.getGameList();

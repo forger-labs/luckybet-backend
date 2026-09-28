@@ -466,20 +466,70 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 			return await this.claimRepo.updateStatus(claim.id, RewardStatus.CLAIMED, {
 				resolvedByAdminId: adminId,
 				externalOperationId: options?.externalOperationId ?? claim.externalOperationId,
-				claimedAt: new Date(),
+        claimedAt: new Date(),
+				errorMessage: options?.adminNotes ?? claim.errorMessage
 			});
 		}
 
-		if (action === 'FORCE_RETRY') {
-			return await this.claimRepo.updateStatus(claim.id, RewardStatus.PENDING, {
-				resolvedByAdminId: adminId,
-				errorMessage: options?.adminNotes
-					? `Reintento forzado por admin ${adminId}: ${options.adminNotes}`
-					: `Reintento forzado por admin ${adminId}`,
-			});
+		// if (action === 'FORCE_RETRY') {
+		// 	return await this.claimRepo.updateStatus(claim.id, RewardStatus.PENDING, {
+		// 		resolvedByAdminId: adminId,
+		// 		errorMessage: options?.adminNotes
+		// 			? `Reintento forzado por admin ${adminId}: ${options.adminNotes}`
+		// 			: `Reintento forzado por admin ${adminId}`,
+		// 	});
+  //   }
+
+    if (action !== 'FORCE_RETRY') {
+      throw new BadRequestException(`Acción de resolución desconocida: ${action}`);
+    }
+
+    const playerIdentifier = claim.player?.username ?? '';
+    const baseRoom = claim.player?.room
+
+    if (!playerIdentifier) {
+      throw new BadRequestException("No hay un usuario asociado a este prize")
+    }
+
+    // FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
+		if (claim.roomId && claim.room) {
+			const targetRoom = claim.room;
+			if (targetRoom?.isActive) {
+				await this.panelApi
+					.changePlayerSenior(playerIdentifier, targetRoom.name)
+					.catch(() => undefined);
+			}
 		}
 
-		throw new BadRequestException(`Acción de resolución desconocida: ${action}`);
+		try {
+			const mutation = await this.panelApi.creditPlayer(
+				playerIdentifier,
+				claim.coinsAmount,
+			);
+			if (mutation.success) {
+				// Retornar al jugador a su sala base
+				if (baseRoom) {
+					await this.panelApi
+						.changePlayerSenior(playerIdentifier, baseRoom.name)
+						.catch(() => undefined);
+				}
+
+				return await this.claimRepo.updateStatus(claim.id, RewardStatus.CLAIMED, {
+					externalOperationId: mutation.operationId ?? null,
+          resolvedByAdminId: adminId,
+					errorMessage: options?.adminNotes ?? claim.errorMessage ?? '',
+					claimedAt: new Date(),
+				});
+			}
+			throw new BadRequestException(
+				`Fallo el reintento en LuckyBet: ${mutation.errorMessage}`,
+			);
+		} catch (error) {
+			this.logger.error(`Error forzando reintento de reward ${claim.id}:`, error);
+			throw new BadRequestException(
+				`No se pudo forzar el credito en LuckyBet: ${error instanceof Error ? error.message : 'Error de conexion'}`,
+			);
+		}
 	}
 
 	/**
