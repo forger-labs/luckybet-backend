@@ -335,21 +335,19 @@ export type UserMissionWithSteps = UserMissionBasic & {
 	steps: StepSubmission[];
 };
 
-export type ReviewQueueByPlayer = {
+export type ReviewQueueItem = {
+	userMissionId: number;
 	playerId: number;
 	playerName?: string;
-	missions: {
-		userMissionId: number;
-		missionId: number;
-		missionTitle: string;
-		missionDescription?: string;
-		missionType: string;
-		coinsAmount: number;
-		experiencePoints: number;
-		userMissionStatus: string;
-		imageUrl?: string;
-		steps: StepSubmission[];
-	}[];
+	missionId: number;
+	missionTitle: string;
+	missionDescription?: string;
+	missionType: string;
+	coinsAmount: number;
+	experiencePoints: number;
+	userMissionStatus: string;
+	imageUrl?: string;
+	steps: StepSubmission[];
 };
 
 // ─── Swagger Response Schemas ──────────────────────────────────
@@ -368,8 +366,10 @@ const stepSubmissionResponseSchema = z.object({
 	reviewerNotes: z.string().optional(),
 });
 
-const reviewQueueMissionSchema = z.object({
+const reviewQueueItemSchema = z.object({
 	userMissionId: z.number().int(),
+	playerId: z.number().int(),
+	playerName: z.string().optional(),
 	missionId: z.number().int(),
 	missionTitle: z.string(),
 	missionDescription: z.string().optional(),
@@ -381,15 +381,7 @@ const reviewQueueMissionSchema = z.object({
 	steps: z.array(stepSubmissionResponseSchema),
 });
 
-const reviewQueueByPlayerSchema = z.object({
-	playerId: z.number().int(),
-	playerName: z.string().optional(),
-	missions: z.array(reviewQueueMissionSchema),
-});
-
-export const PlayerMissionsQueueResponseSchema = paginatedResponseSchema(
-	reviewQueueByPlayerSchema,
-);
+export const ReviewQueueResponseSchema = paginatedResponseSchema(reviewQueueItemSchema);
 
 // ─── Response DTOs ─────────────────────────────────────────────
 export class MissionResponseDto extends createZodDto(MissionResponseSchema) {}
@@ -398,9 +390,7 @@ export class UserMissionResponseDto extends createZodDto(
 	apiResponseSchema(z.object({})),
 ) {}
 export class StepResponseDto extends createZodDto(apiResponseSchema(z.object({}))) {}
-export class PlayerMissionsQueueResponseDto extends createZodDto(
-	PlayerMissionsQueueResponseSchema,
-) {}
+export class ReviewQueueResponseDto extends createZodDto(ReviewQueueResponseSchema) {}
 
 // ─── Filter Schemas ───────────────────────────────────────────
 export enum SortOrder {

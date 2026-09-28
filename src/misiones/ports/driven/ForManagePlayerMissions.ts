@@ -1,25 +1,27 @@
 import type { UploadableFile } from '../../../shared/storage/storage.port';
 import type {
-	ReviewQueueByPlayer,
+	ReviewQueueItem,
 	StepSubmission,
 	UserMissionBasic,
 	UserMissionFilter,
 	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
-import { StepStatus } from '../../app/enums';
+import { StepStatus, UserMissionStatus } from '../../app/enums';
 
 export type PlayerMissionsQueueFilters = {
-	status?: string;
+	status?: UserMissionStatus;
 	playerId?: number;
-	experience?: number;
-	coinsAmount?: number;
+	minExperience?: number;
+	maxExperience?: number;
+	maxCoinsAmount?: number;
+	minCoinsAmount?: number;
 	type?: string;
 	take?: number;
 	skip?: number;
 };
 
 export type PlayerMissionsQueueResult = {
-	players: ReviewQueueByPlayer[];
+	items: ReviewQueueItem[];
 	total: number;
 	limit: number;
 	skip: number;

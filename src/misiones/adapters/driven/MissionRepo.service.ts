@@ -133,7 +133,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 					content: true,
 					id: true,
 					stepOrder: true,
-          type: true,
+					type: true,
 					targetConfig: true,
 				},
 				room: {
@@ -170,7 +170,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 
 			Object.assign(mission, missionFields);
 			const saved = await manager.save(Mission, mission);
-        if (steps !== undefined) {
+			if (steps !== undefined) {
 				await manager.delete(MissionStep, { missionId: id });
 				if (steps.length > 0) {
 					await manager.save(

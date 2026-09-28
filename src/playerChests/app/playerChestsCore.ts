@@ -466,8 +466,8 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 			return await this.claimRepo.updateStatus(claim.id, RewardStatus.CLAIMED, {
 				resolvedByAdminId: adminId,
 				externalOperationId: options?.externalOperationId ?? claim.externalOperationId,
-        claimedAt: new Date(),
-				errorMessage: options?.adminNotes ?? claim.errorMessage
+				claimedAt: new Date(),
+				errorMessage: options?.adminNotes ?? claim.errorMessage,
 			});
 		}
 
@@ -478,20 +478,20 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		// 			? `Reintento forzado por admin ${adminId}: ${options.adminNotes}`
 		// 			: `Reintento forzado por admin ${adminId}`,
 		// 	});
-  //   }
+		//   }
 
-    if (action !== 'FORCE_RETRY') {
-      throw new BadRequestException(`Acción de resolución desconocida: ${action}`);
-    }
+		if (action !== 'FORCE_RETRY') {
+			throw new BadRequestException(`Acción de resolución desconocida: ${action}`);
+		}
 
-    const playerIdentifier = claim.player?.username ?? '';
-    const baseRoom = claim.player?.room
+		const playerIdentifier = claim.player?.username ?? '';
+		const baseRoom = claim.player?.room;
 
-    if (!playerIdentifier) {
-      throw new BadRequestException("No hay un usuario asociado a este prize")
-    }
+		if (!playerIdentifier) {
+			throw new BadRequestException('No hay un usuario asociado a este prize');
+		}
 
-    // FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
+		// FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
 		if (claim.roomId && claim.room) {
 			const targetRoom = claim.room;
 			if (targetRoom?.isActive) {
@@ -516,7 +516,7 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 
 				return await this.claimRepo.updateStatus(claim.id, RewardStatus.CLAIMED, {
 					externalOperationId: mutation.operationId ?? null,
-          resolvedByAdminId: adminId,
+					resolvedByAdminId: adminId,
 					errorMessage: options?.adminNotes ?? claim.errorMessage ?? '',
 					claimedAt: new Date(),
 				});

@@ -1,17 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, FindOptionsWhere, Repository } from 'typeorm';
+import {
+	Between,
+	FindOptionsWhere,
+	LessThanOrEqual,
+	MoreThanOrEqual,
+	Repository,
+} from 'typeorm';
 
 import type {
-	StepSubmission,
 	UserMissionBasic,
 	UserMissionFilter,
 	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
 import { SortOrder } from '../../app/dto/mission.schema';
+import { Mission } from '../../app/entities/mission.entity';
 import { UserMission } from '../../app/entities/user-mission.entity';
-import { UserMissionStatus } from '../../app/enums';
-import { ForDatabaseUserMissions } from '../../ports/driver/ForDatabaseUserMissions';
+import { MissionType, UserMissionStatus } from '../../app/enums';
+import type {
+	ForDatabaseUserMissions,
+	PlayerMissionsQueueFiltersDB,
+} from '../../ports/driver/ForDatabaseUserMissions';
 
 @Injectable()
 export class UserMissionRepoService implements ForDatabaseUserMissions {
@@ -96,13 +105,63 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 	}
 
 	findUserMissionsWithContext(
-		where: FindOptionsWhere<UserMission>,
-	): Promise<UserMission[]> {
-		return this.userMissionModel.find({
+		filters: PlayerMissionsQueueFiltersDB,
+		take: number,
+		skip: number,
+	): Promise<[UserMission[], number]> {
+		const where = this.buildUserMissionQueueWhere(filters);
+		return this.userMissionModel.findAndCount({
 			where,
 			relations: { player: true, mission: true, steps: true },
 			order: { created_at: 'DESC' },
+			take,
+			skip,
 		});
+	}
+
+	private buildUserMissionQueueWhere(
+		params: PlayerMissionsQueueFiltersDB,
+	): FindOptionsWhere<UserMission> {
+		const where: FindOptionsWhere<UserMission> = {};
+
+		if (params.playerId !== undefined) {
+			where.playerId = params.playerId;
+		}
+		if (params.umStatus) {
+			where.status = params.umStatus;
+		}
+
+		const missionWhere: FindOptionsWhere<Mission> = {};
+		if (params.minExperience !== undefined) {
+			missionWhere.experiencePoints = MoreThanOrEqual(params.minExperience);
+		}
+		if (params.maxExperience !== undefined) {
+			missionWhere.experiencePoints = LessThanOrEqual(params.maxExperience);
+		}
+		if (params.minCoinsAmount !== undefined) {
+			missionWhere.coinsAmount = MoreThanOrEqual(params.minCoinsAmount);
+		}
+		if (params.maxCoinsAmount !== undefined) {
+			missionWhere.coinsAmount = LessThanOrEqual(params.maxCoinsAmount);
+		}
+		if (params.type) {
+			const resolved = this.resolveMissionType(params.type);
+			if (resolved) {
+				missionWhere.type = resolved;
+			}
+		}
+
+		if (Object.keys(missionWhere).length > 0) {
+			where.mission = missionWhere;
+		}
+		return where;
+	}
+
+	private resolveMissionType(type?: string): MissionType | undefined {
+		if (type === undefined || type === null) return;
+		return Object.values(MissionType).includes(type as MissionType)
+			? (type as MissionType)
+			: undefined;
 	}
 
 	async updateCurrentStep(id: number, step: number): Promise<UserMissionBasic> {

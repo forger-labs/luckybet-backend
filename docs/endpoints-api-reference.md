@@ -852,10 +852,31 @@ Controladores: `MissionsController` (Administración) y `PlayerMisionesControlle
 - **Respuesta (`201 Created`)**: Retorna la misión creada con sus pasos en `data`.
 
 ##### `GET /api/v1.0/missions/admin/review-queue`
-- **Propósito**: Cola de pasos manuales pendientes de revisión humana por los administradores.
+- **Propósito**: Cola de misiones de usuario pendientes de revisión humana por los administradores. Retorna una lista plana paginada en base de datos.
 - **Autenticación**: **Admin JWT** (roles `SUPER_ADMIN` o `REVIEWER`).
-- **Query Params**: `status`, `playerId`, `experience`, `coinsAmount`, `type`, `take` (max 100), `skip`.
-- **Respuesta (`200 OK`)**: Retorna las misiones agrupadas por jugador con sus evidencias en `data`.
+- **Query Params**:
+  - `status` *(enum: `"IN_PROGRESS"` | `"COMPLETED"` | `"FAILED"` | `"EXPIRED"`, opcional)*: Filtra por estado de la misión de usuario.
+  - `playerId` *(number, opcional)*: Filtrar por ID de jugador.
+  - `minExperience` *(number, opcional)*: Experiencia mínima de la misión (>=).
+  - `maxExperience` *(number, opcional)*: Experiencia máxima de la misión (<=).
+  - `minCoinsAmount` *(number, opcional)*: Monedas mínimas de la misión (>=).
+  - `maxCoinsAmount` *(number, opcional)*: Monedas máximas de la misión (<=).
+  - `type` *(enum: `"DAILY"` | `"WEEKLY"` | `"FIXED"`, opcional)*: Tipo de misión.
+  - `take` *(number, default: 100)*: Cantidad de registros por página.
+  - `skip` *(number, default: 0)*: Desplazamiento / Offset.
+- **Respuesta (`200 OK`)**: Retorna lista plana de misiones de usuario paginada con metadata de paginación (`skip`, `limit`, `total`). Cada ítem incluye:
+  - `userMissionId` *(number)*
+  - `playerId` *(number)*
+  - `playerName` *(string, opcional)*
+  - `missionId` *(number)*
+  - `missionTitle` *(string)*
+  - `missionDescription` *(string, opcional)*
+  - `missionType` *(string)*
+  - `coinsAmount` *(number)*
+  - `experiencePoints` *(number)*
+  - `userMissionStatus` *(string)*
+  - `imageUrl` *(string, opcional)*: URL pública resuelta
+  - `steps` *(array)*: Lista de pasos con evidencias y notas de revisión
 
 ##### `POST /api/v1.0/missions/admin/steps/:stepId/review`
 - **Propósito**: Aprueba o rechaza la evidencia manual enviada por un jugador.

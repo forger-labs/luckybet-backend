@@ -95,7 +95,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			relations: { userMission: { mission: true, player: true }, resolvedByAdmin: true },
 			order,
 			take: filter?.take ?? 50,
-      skip: filter?.skip ?? 0,
+			skip: filter?.skip ?? 0,
 		});
 
 		return [rewards.map(r => this.toBasic(r)), count];

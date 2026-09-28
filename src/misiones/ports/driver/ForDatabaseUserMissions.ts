@@ -1,5 +1,3 @@
-import type { FindOptionsWhere } from 'typeorm';
-
 import type {
 	UserMissionBasic,
 	UserMissionFilter,
@@ -7,6 +5,16 @@ import type {
 } from '../../app/dto/mission.schema';
 import type { UserMission } from '../../app/entities/user-mission.entity';
 import { UserMissionStatus } from '../../app/enums';
+
+export type PlayerMissionsQueueFiltersDB = {
+	umStatus?: UserMissionStatus;
+	playerId?: number;
+	minExperience?: number;
+	maxExperience?: number;
+	minCoinsAmount?: number;
+	maxCoinsAmount?: number;
+	type?: string;
+};
 
 export interface ForDatabaseUserMissions {
 	createUserMission(data: {
@@ -29,8 +37,10 @@ export interface ForDatabaseUserMissions {
 	findByIdWithSteps(id: number): Promise<UserMissionWithSteps | null>;
 
 	findUserMissionsWithContext(
-		where: FindOptionsWhere<UserMission>,
-	): Promise<UserMission[]>;
+		filters: PlayerMissionsQueueFiltersDB,
+		take: number,
+		skip: number,
+	): Promise<[UserMission[], number]>;
 
 	updateCurrentStep(id: number, step: number): Promise<UserMissionBasic>;
 

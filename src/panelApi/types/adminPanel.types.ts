@@ -110,8 +110,8 @@ export interface GetPlayedGamesOptions {
 	limit?: number;
 	provider?: string;
 	gameName?: string;
-  forceRefresh?: boolean;
-	ttl?: number
+	forceRefresh?: boolean;
+	ttl?: number;
 }
 
 export interface PlayerGameHistoryResult {

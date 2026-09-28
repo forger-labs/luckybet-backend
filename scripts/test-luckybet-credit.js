@@ -204,8 +204,8 @@ async function executeAction(sessionId, userId, args) {
 		if (parsed.printUrl) {
 			const _match = parsed.printUrl.match(/operation=([0-9a-zA-Z_-]+)/);
 		}
-  } catch {
-    // a
+	} catch {
+		// a
 	}
 }
 

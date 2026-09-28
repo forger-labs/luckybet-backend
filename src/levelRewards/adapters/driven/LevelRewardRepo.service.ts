@@ -116,8 +116,8 @@ export class LevelRewardRepoService implements ForDatabaseLevelRewards {
 			where,
 			order,
 			take: filter?.take ?? 50,
-      skip: filter?.skip ?? 0,
-			relations: {room: true, player: true, level: true, resolvedByAdmin: true}
+			skip: filter?.skip ?? 0,
+			relations: { room: true, player: true, level: true, resolvedByAdmin: true },
 		});
 
 		return [list.map(r => this.toBasic(r)), count];

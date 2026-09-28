@@ -41,7 +41,7 @@ import {
 	MissionFilterDto,
 	MissionListResponseDto,
 	MissionResponseDto,
-	PlayerMissionsQueueResponseDto,
+	ReviewQueueResponseDto,
 	StepResponseDto,
 } from '../../app/dto/mission.schema';
 import { UpdateMissionDto } from '../../app/dto/update-mission.dto';
@@ -126,23 +126,29 @@ export class MissionsController {
 	@UseGuards(JwtGuard, RolesGuard)
 	@Roles(AdminRoles.SUPER_ADMIN, AdminRoles.REVIEWER)
 	@HttpCode(HttpStatus.OK)
-	@ApiOkResponse({ type: PlayerMissionsQueueResponseDto })
+	@ApiOkResponse({ type: ReviewQueueResponseDto })
 	@ApiQuery({
 		name: 'status',
 		required: false,
-		enum: [...Object.values(StepStatus), ...Object.values(UserMissionStatus)],
+		enum: Object.values(UserMissionStatus),
 	})
 	@ApiQuery({ name: 'playerId', required: false, type: Number })
-	@ApiQuery({ name: 'experience', required: false, type: Number })
-	@ApiQuery({ name: 'coinsAmount', required: false, type: Number })
+	@ApiQuery({ name: 'minExperience', required: false, type: Number })
+	@ApiQuery({ name: 'maxExperience', required: false, type: Number })
+	@ApiQuery({ name: 'minCoinsAmount', required: false, type: Number })
+	@ApiQuery({ name: 'maxCoinsAmount', required: false, type: Number })
 	@ApiQuery({ name: 'type', required: false, enum: MissionType })
 	@ApiQuery({ name: 'take', required: false, type: Number })
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	async getPlayerMissionsQueue(
-		@Query('status') status?: string,
+		@Query('status') status?: UserMissionStatus,
 		@Query('playerId', new ParseIntPipe({ optional: true })) playerId?: number,
-		@Query('experience', new ParseIntPipe({ optional: true })) experience?: number,
-		@Query('coinsAmount', new ParseIntPipe({ optional: true })) coinsAmount?: number,
+		@Query('minExperience', new ParseIntPipe({ optional: true })) minExperience?: number,
+		@Query('maxExperience', new ParseIntPipe({ optional: true })) maxExperience?: number,
+		@Query('minCoinsAmount', new ParseIntPipe({ optional: true }))
+		minCoinsAmount?: number,
+		@Query('maxCoinsAmount', new ParseIntPipe({ optional: true }))
+		maxCoinsAmount?: number,
 		@Query('type') type?: string,
 		@Query('take', new ParseIntPipe({ optional: true })) take?: number,
 		@Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
@@ -150,14 +156,16 @@ export class MissionsController {
 		const result = await this.misionesCore.getPlayerMissionsQueue({
 			status,
 			playerId,
-			experience,
-			coinsAmount,
+			minExperience,
+			maxExperience,
+			minCoinsAmount,
+			maxCoinsAmount,
 			type,
 			take,
 			skip,
 		});
 		return buildPaginatedResponse(
-			result.players,
+			result.items,
 			'Cola de revision obtenida exitosamente',
 			true,
 			{ skip: result.skip, limit: result.limit, total: result.total },

@@ -35,7 +35,10 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 	}
 
 	async findById(id: number): Promise<UserMissionChestBasic | null> {
-		const found = await this.claimModel.findOne({ where: { id }, relations: {player: {room: true}, room: true} });
+		const found = await this.claimModel.findOne({
+			where: { id },
+			relations: { player: { room: true }, room: true },
+		});
 		return found ? this.toBasic(found) : null;
 	}
 
@@ -134,7 +137,7 @@ export class UserMissionChestRepoService implements ForDatabasePlayerChests {
 				status: true,
 				externalOperationId: true,
 				errorMessage: true,
-        resolvedByAdminId: true,
+				resolvedByAdminId: true,
 				claimedAt: true,
 				created_at: true,
 				player: {

@@ -62,12 +62,12 @@ export class ChestsController {
 	@ApiQuery({ name: 'skip', required: false, type: Number })
 	@ApiQuery({ name: 'periodType', required: false, enum: ChestPeriodType })
 	@ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  @ApiQuery		({ name: 'title', required: false, type: String })
-  @ApiQuery({ name: 'minCoins', required: false, type: Number})
-	@ApiQuery({ name: 'maxCoins', required: false, type: Number})
-	@ApiQuery({ name: 'minRequiredMissions', required: false, type: Number})
-	@ApiQuery({ name: 'maxRequiredMissions', required: false, type: Number})
-  @ApiQuery({ name: 'roomId', required: false, type: Number})
+	@ApiQuery({ name: 'title', required: false, type: String })
+	@ApiQuery({ name: 'minCoins', required: false, type: Number })
+	@ApiQuery({ name: 'maxCoins', required: false, type: Number })
+	@ApiQuery({ name: 'minRequiredMissions', required: false, type: Number })
+	@ApiQuery({ name: 'maxRequiredMissions', required: false, type: Number })
+	@ApiQuery({ name: 'roomId', required: false, type: Number })
 	async listChests(@Query() filter: FilterChestDTO) {
 		const result = await this.chestsCore.listChests(filter);
 		return buildPaginatedResponse(
