@@ -7,7 +7,8 @@ import {
 	paginatedResponseSchema,
 } from '../../../shared/swagger/apiResponse.schema';
 import type { StepTargetConfig } from '../entities/mission-step.entity';
-import { MissionStatus, MissionType, StepType } from '../enums';
+import { MissionStatus, MissionType, StepType, UserMissionStatus } from '../enums';
+import { zDateHelper } from '@/src/shared/swagger/date.schema';
 
 export const validationMissionMessages = {
 	title: {
@@ -386,9 +387,7 @@ export const ReviewQueueResponseSchema = paginatedResponseSchema(reviewQueueItem
 // ─── Response DTOs ─────────────────────────────────────────────
 export class MissionResponseDto extends createZodDto(MissionResponseSchema) {}
 export class MissionListResponseDto extends createZodDto(MissionListResponseSchema) {}
-export class UserMissionResponseDto extends createZodDto(
-	apiResponseSchema(z.object({})),
-) {}
+
 export class StepResponseDto extends createZodDto(apiResponseSchema(z.object({}))) {}
 export class ReviewQueueResponseDto extends createZodDto(ReviewQueueResponseSchema) {}
 
@@ -468,3 +467,18 @@ export type UserMissionFilter = z.infer<typeof userMissionFilterSchema>;
 
 export class MissionFilterDto extends createZodDto(missionFilterSchema) {}
 export class UserMissionFilterDto extends createZodDto(userMissionFilterSchema) {}
+
+export const UserMissionSchema = z.object({
+  id: z.number().describe('ID'),
+  playerId: z.number(),
+  missionId: z.number(),
+  status: z.enum(UserMissionStatus),
+  currentStep: z.number(),
+  startedAt: zDateHelper,
+  completedAt: zDateHelper.optional(),
+  steps: z.array(stepSubmissionResponseSchema)
+})
+
+export class UserMissionResponseDto extends createZodDto(
+	apiResponseSchema(UserMissionSchema),
+) {}

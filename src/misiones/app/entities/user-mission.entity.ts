@@ -6,6 +6,7 @@ import { UserMissionStatus } from '../enums';
 import { Mission } from './mission.entity';
 import type { UserMissionStep } from './user-mission-step.entity';
 
+// TODO: delete base entity because started_at and created_at have the same responsability
 @Entity('user_missions')
 export class UserMission extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'player_id' })
@@ -31,11 +32,11 @@ export class UserMission extends BaseEntity {
 	completedAt?: Date;
 
 	// Relationships
-	@ManyToOne(() => Player, { onDelete: 'CASCADE' })
+	@ManyToOne(() => Player)
 	@JoinColumn({ name: 'player_id' })
 	player!: Player;
 
-	@ManyToOne(() => Mission, { onDelete: 'CASCADE' })
+	@ManyToOne(() => Mission)
 	@JoinColumn({ name: 'mission_id' })
 	mission!: Mission;
 

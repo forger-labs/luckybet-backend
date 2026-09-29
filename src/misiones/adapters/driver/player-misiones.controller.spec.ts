@@ -30,7 +30,8 @@ describe('PlayerMisionesController', () => {
 		missionId: 2,
 		status: 'IN_PROGRESS',
 		currentStep: 1,
-		startedAt: new Date(),
+    startedAt: new Date(),
+    steps: []
 	};
 
 	const mockStepSubmission = {

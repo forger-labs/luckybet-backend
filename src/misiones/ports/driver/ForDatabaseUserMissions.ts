@@ -32,7 +32,7 @@ export interface ForDatabaseUserMissions {
 	findByPlayer(
 		playerId: number,
 		filter?: UserMissionFilter,
-	): Promise<[UserMissionBasic[], number]>;
+	): Promise<[UserMissionWithSteps[], number]>;
 
 	findByIdWithSteps(id: number): Promise<UserMissionWithSteps | null>;
 

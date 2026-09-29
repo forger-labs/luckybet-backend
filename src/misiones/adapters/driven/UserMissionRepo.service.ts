@@ -59,7 +59,7 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 	async findByPlayer(
 		playerId: number,
 		filter?: UserMissionFilter,
-	): Promise<[UserMissionBasic[], number]> {
+	): Promise<[UserMissionWithSteps[], number]> {
 		const where: FindOptionsWhere<UserMission> = { playerId };
 
 		if (filter?.status) {
@@ -75,9 +75,26 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 			where,
 			skip: filter?.skip ?? 0,
 			take: filter?.take ?? 50,
-			order: { created_at: orderDirection },
+			order: { startedAt: orderDirection },
+			relations: { steps: true },
 		});
-		return [list.map(um => this.toBasic(um)), count];
+		return [
+			list.map(um => ({
+				...this.toBasic(um),
+				steps: (um.steps ?? []).map(s => ({
+					id: s.id,
+					userMissionId: s.userMissionId,
+					missionStepId: s.missionStepId,
+					status: s.status,
+					submissionText: s.submissionText,
+					submissionImageUrl: s.submissionImageUrl,
+					reviewedById: s.reviewedById,
+					reviewedAt: s.reviewedAt,
+					reviewerNotes: s.reviewerNotes,
+				})),
+			})),
+			count,
+		];
 	}
 
 	async findByIdWithSteps(id: number): Promise<UserMissionWithSteps | null> {

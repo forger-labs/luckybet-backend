@@ -466,7 +466,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		playerId: number,
 		filter?: UserMissionFilter,
 	): Promise<{
-		missions: UserMissionBasic[];
+		missions: UserMissionWithSteps[];
 		total: number;
 		limit: number;
 		skip: number;
