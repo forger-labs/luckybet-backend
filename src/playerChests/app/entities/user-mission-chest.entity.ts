@@ -1,6 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
-import { Player } from '@/src/players/app/entities/player.entity';
+import { Player } from '../../../players/app/entities/player.entity';
 import { MissionChest } from '../../../chests/app/entities/mission-chest.entity';
 import { RewardStatus } from '../../../rewards/app/enums';
 import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';

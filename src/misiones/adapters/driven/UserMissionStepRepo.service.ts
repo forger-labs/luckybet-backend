@@ -31,9 +31,7 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 			existing.submissionText = data.submissionText;
 			existing.submissionImageUrl = data.submissionImageUrl;
 			existing.status = StepStatus.PENDING;
-			existing.reviewedById = undefined;
-			existing.reviewedAt = undefined;
-			existing.reviewerNotes = undefined;
+			// We preserve reviewedById, reviewedAt, reviewerNotes so user and reviewer keep feedback history
 			const saved = await this.stepModel.save(existing);
 			return this.toSubmission(saved);
 		}
@@ -46,6 +44,11 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 		});
 		const saved = await this.stepModel.save(step);
 		return this.toSubmission(saved);
+	}
+
+	async findById(id: number): Promise<StepSubmission | null> {
+		const step = await this.stepModel.findOne({ where: { id } });
+		return step ? this.toSubmission(step) : null;
 	}
 
 	async findByUserMissionAndStep(
@@ -74,9 +77,11 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 		const step = await this.stepModel.findOne({ where: { id } });
 		if (!step) throw new Error('Step submission not found');
 
-		step.status = status;
-		step.reviewedById = adminId;
-		step.reviewedAt = new Date();
+    step.status = status;
+    if (adminId > 0) {
+		  step.reviewedById = adminId;
+    }
+    step.reviewedAt = new Date();
 		step.reviewerNotes = notes;
 
 		const saved = await this.stepModel.save(step);

@@ -9,6 +9,12 @@ export async function userAdminSeeder(queryRunner: QueryRunner) {
 	const userAdminRepo = queryRunner.dataSource.getRepository(User);
 	const username = process.env.ADMIN_USER ?? 'ala';
 	const password = process.env.PASSWORD ?? '123456';
+
+	const existing = await userAdminRepo.findOneBy({ username });
+	if (existing) {
+		return;
+	}
+
 	const user = userAdminRepo.create({
 		username,
 		password,

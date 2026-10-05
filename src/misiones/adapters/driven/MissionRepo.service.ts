@@ -45,7 +45,8 @@ export class MissionRepoService implements ForDatabaseMissions {
 						missionId: saved.id,
 						stepOrder: step.stepOrder,
 						type: step.type,
-						content: step.content,
+            content: step.content,
+						targetConfig: step.targetConfig
 					}),
 				),
 			);

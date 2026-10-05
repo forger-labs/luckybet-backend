@@ -9,6 +9,8 @@ export interface ForDatabaseUserMissionSteps {
 		submissionImageUrl?: string;
 	}): Promise<StepSubmission>;
 
+	findById(id: number): Promise<StepSubmission | null>;
+
 	findByUserMissionAndStep(
 		userMissionId: number,
 		missionStepId: number,

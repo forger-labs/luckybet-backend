@@ -22,7 +22,7 @@ export class UserMission extends BaseEntity {
 	})
 	status!: UserMissionStatus;
 
-	@Column({ type: 'int', default: 1, name: 'current_step' })
+	@Column({ type: 'int', default: 0, name: 'current_step' })
 	currentStep!: number;
 
 	@Column({ type: 'timestamp', default: () => 'NOW()', name: 'started_at' })

@@ -40,7 +40,8 @@ export interface ForManagePlayerMissions {
 	verifyAutoStep(
 		userMissionId: number,
 		stepId: number,
-		playerId: number,
+    playerId: number,
+		username: string,
 		token?: string,
 	): Promise<StepSubmission>;
 

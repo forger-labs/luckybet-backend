@@ -129,10 +129,10 @@ export class AdminPanelService implements ForAdminPanel {
 	 * Returns a valid PHPSESSID session from Redis or performs authentication.
 	 */
 	async ensureSession(): Promise<string> {
-		const cachedSession = await this.cache.get<string>(LUCKYBET_ADMIN_SESSION_CACHE_KEY);
-		if (cachedSession) {
-			return cachedSession;
-		}
+		// const cachedSession = await this.cache.get<string>(LUCKYBET_ADMIN_SESSION_CACHE_KEY);
+		// if (cachedSession) {
+		// 	return cachedSession;
+		// }
 
 		if (this.loginPromise !== null) {
 			return await this.loginPromise;
@@ -165,7 +165,7 @@ export class AdminPanelService implements ForAdminPanel {
 				},
 				maxRedirects: 0,
 				validateStatus: status => status === 200 || status === 302,
-			});
+      });
 
 			const rawSetCookie =
 				response.headers['set-cookie'] || response.headers['Set-Cookie'];
@@ -374,7 +374,6 @@ export class AdminPanelService implements ForAdminPanel {
 		params.append('send', 'true');
 		params.append('all', 'false');
 		params.append('operation', 'in');
-
 		if (options?.bonus !== undefined && options?.bonus !== null) {
 			params.append('bonus', String(options.bonus));
 		}
@@ -397,7 +396,7 @@ export class AdminPanelService implements ForAdminPanel {
 					Cookie: `PHPSESSID=${String(sessionId)}`,
 				},
 			});
-		});
+    });
 
 		const operationId = this.extractOperationId(data.printUrl as string);
 
@@ -481,7 +480,7 @@ export class AdminPanelService implements ForAdminPanel {
 			}
 		}
 
-		const now = new Date();
+		const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
 		const toDateStr = this.formatDate(now);
 		const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 		const fromDateStr = this.formatDate(fromDate);
@@ -493,7 +492,7 @@ export class AdminPanelService implements ForAdminPanel {
 			limit: 1000,
 		});
 
-		const sessions = historyRes.sessions ?? historyRes.history ?? [];
+    const sessions = historyRes.sessions ?? historyRes.history ?? [];
 		const deduplicatedGames = new Map<string, PlayedGame>();
 
 		if (sessions.length > 0) {
@@ -523,51 +522,6 @@ export class AdminPanelService implements ForAdminPanel {
 					}
 				}
 			}
-		} else {
-			// 2. Fallback to area=balance ledger if area=history returns empty
-			const balanceData = await this.getPlayerBalance(userId, {
-				from: fromDateStr,
-				to: toDateStr,
-				limit: 1000,
-			});
-
-			const operations = balanceData.operationsData ?? [];
-			const sortedOps = [...operations].sort((a, b) => {
-				const timeA = new Date(a.datetime || 0).getTime();
-				const timeB = new Date(b.datetime || 0).getTime();
-				return timeB - timeA;
-			});
-
-			for (const op of sortedOps) {
-				const gameIdentifier =
-					op.game ||
-					op.bonus_game ||
-					(op.system !== 'admin' && op.system !== 'usual' ? op.system : null);
-
-				if (!gameIdentifier) {
-					continue;
-				}
-
-				const rawId = String(gameIdentifier);
-				const wagerAmount = Number(op.wager) || 0;
-				const lastPlayedAt = op.datetime || op.date || toDateStr;
-
-				if (!deduplicatedGames.has(rawId)) {
-					deduplicatedGames.set(rawId, {
-						gameId: rawId,
-						gameName: this.formatGameName(rawId),
-						lastPlayedAt,
-						totalBetInPeriod: wagerAmount,
-						playCount: 1,
-					});
-				} else {
-					const existing = deduplicatedGames.get(rawId);
-					if (existing) {
-						existing.playCount = (existing.playCount || 1) + 1;
-						existing.totalBetInPeriod = (existing.totalBetInPeriod || 0) + wagerAmount;
-					}
-				}
-			}
 		}
 
 		// 3. Enrich games with catalog data (images from CDN and provider)
@@ -579,7 +533,8 @@ export class AdminPanelService implements ForAdminPanel {
 				img?: string;
 				label?: string;
 			}>
-		>(LUCKYBET_GAME_CATALOG_CACHE_KEY);
+      >(LUCKYBET_GAME_CATALOG_CACHE_KEY);
+
 
 		if (catalog && Array.isArray(catalog)) {
 			for (const game of deduplicatedGames.values()) {
@@ -613,7 +568,7 @@ export class AdminPanelService implements ForAdminPanel {
 			to: toDateStr,
 			games: gamesList,
 			totalUniqueGames: deduplicatedGames.size,
-		};
+    };
 
 		await this.cache.set(cacheKey, result, options?.ttl ?? this.gameActivityTtl);
 		return result;

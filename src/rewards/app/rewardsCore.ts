@@ -45,6 +45,19 @@ export class RewardsCore implements ForManageRewards {
 		return await this.rewardRepo.createReward(data);
 	}
 
+  async findClaimRewardByUMId(userMissionId: number, playerId: number): Promise<MissionRewardBasic> {
+    const existing = await this.rewardRepo.findByUserMissionId(userMissionId);
+    if (!existing) {
+			throw new NotFoundException('Recompensa no encontrada para esta mision');
+    }
+
+    if (existing.playerId !== playerId) {
+			throw new ForbiddenException('No tienes permiso para reclamar esta recompensa');
+    }
+
+		return existing
+	}
+
 	async claimReward(
 		userMissionId: number,
 		playerId: number,
@@ -67,7 +80,6 @@ export class RewardsCore implements ForManageRewards {
 				'Este reclamo se encuentra en proceso de verificacion por el equipo de administracion',
 			);
 		}
-
 		// Obtener jugador y su sala base
 		const player = await this.playerRepo.findByUnique({ id: playerId });
 
@@ -130,10 +142,10 @@ export class RewardsCore implements ForManageRewards {
 			operationId?: string | null;
 			errorMessage?: string;
 		} | null = null;
-		try {
+    try {
 			mutationResult = await this.panelApi.creditPlayer(
 				playerIdentifier,
-				locked.coinsAmount,
+				existing.coinsAmount,
 			);
 		} catch (error) {
 			// Timeout o error de red en la carga
@@ -151,8 +163,7 @@ export class RewardsCore implements ForManageRewards {
 							: 'Error desconocido de conexion al acreditar',
 				},
 			);
-		}
-
+    }
 		if (!mutationResult.success) {
 			this.logger.error(
 				`Error reportado por LuckyBet al acreditar fichas: ${mutationResult.errorMessage}`,

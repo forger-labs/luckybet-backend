@@ -749,13 +749,21 @@ Controladores: `MissionsController` (Administración) y `PlayerMisionesControlle
   ```
 
 ##### `POST /api/v1.0/missions/user-missions/:userMissionId/steps/:stepId/submit`
-- **Propósito**: Envía la evidencia para un paso de tipo `TEXT` o `IMAGE`. Si todos los pasos se completan, genera automáticamente el registro en `mission_rewards` con estado `PENDING`.
+- **Propósito**: Envía o reenvía la evidencia manual para un paso de tipo `TEXT` o `IMAGE`. No bloquea al usuario por orden secuencial estricto, permitiendo enviar evidencias a su propio ritmo mientras la misión esté `IN_PROGRESS`.
 - **Tipo de Contenido**: `multipart/form-data`
 - **Autenticación / Token**: **Player Token** (`Authorization: Bearer <playerToken>` o `x-player-token: <playerToken>`).
 - **Parámetros de Ruta**: `userMissionId` (integer), `stepId` (integer).
 - **Campos del Formulario (`multipart/form-data`)**:
-  - `submissionText` *(string, opcional si el paso es TEXT)*: Texto ingresado.
-  - `submissionImage` *(binary file, opcional si el paso es IMAGE)*: Captura (JPEG, PNG o WebP, máx 5 MiB).
+  - `submissionText` *(string, obligatorio si el paso es TEXT)*: Texto ingresado como evidencia.
+  - `submissionImage` *(binary file, obligatorio si el paso es IMAGE)*: Captura de pantalla o comprobante (JPEG, PNG o WebP, máx 5 MiB).
+- **Reglas de Negocio y Ciclo de Vida**:
+  1. **Disponibilidad para modificación**:
+     - **Sin sumisión previa**: Crea la sumisión en estado `PENDING`.
+     - **Estado `PENDING` o `REJECTED`**: Permite corregir o actualizar la evidencia. El estado se fija en `PENDING` para una nueva revisión administrativa.
+     - **Estado `APPROVED`**: Bloqueado contra modificaciones (`400 Bad Request: Este paso ya ha sido aprobado y no puede modificarse`).
+  2. **Limpieza automática de almacenamiento**: Si se reenvía una nueva imagen en un paso que ya poseía una imagen previa almacenada en S3/Cloudflare R2, el sistema elimina automáticamente la imagen vieja para evitar archivos huérfanos.
+  3. **Preservación del feedback de moderación**: Durante correcciones o reenvíos, las notas del revisor anterior (`reviewerNotes`, `reviewedById`, `reviewedAt`) se preservan en la entidad para que el jugador y el moderador mantengan el contexto hasta la nueva evaluación.
+  4. **Contador de progreso (`currentStep`)**: Representa la cantidad de pasos aprobados de la misión (inicia en 0). No avanza con el simple envío en `PENDING`, sino al ser aprobado por un administrador o por el sistema. Cuando `currentStep >= totalSteps`, la misión se completa automáticamente y se genera la recompensa.
 - **Respuesta (`200 OK`)**:
   ```json
   {
@@ -765,12 +773,12 @@ Controladores: `MissionsController` (Administración) y `PlayerMisionesControlle
       "id": 25,
       "userMissionId": 15,
       "missionStepId": 10,
-      "status": "APPROVED",
-      "submissionText": "Usuario de prueba",
-      "submissionImageUrl": "https://cdn.example.com/missions/uuid-captura.png",
-      "reviewedById": null,
-      "reviewedAt": null,
-      "reviewerNotes": null
+      "status": "PENDING",
+      "submissionText": "Comprobante actualizado",
+      "submissionImageUrl": "https://cdn.example.com/steps/uuid-captura.png",
+      "reviewedById": 2,
+      "reviewedAt": "2026-09-24T14:30:00.000Z",
+      "reviewerNotes": "Por favor sube una captura donde se aprecie claramente la fecha"
     }
   }
   ```

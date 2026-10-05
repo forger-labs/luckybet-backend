@@ -1,15 +1,16 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+import { missionDown, missionSeeder } from './missionSeeder';
 import { userAdminDown, userAdminSeeder } from './userAdminSeeder';
 
 export class CoreSeeder1740000000000 implements MigrationInterface {
 	public async up(queryRunner: QueryRunner): Promise<void> {
-		// Los seeders legacy de auth (users) fueron eliminados junto con el módulo auth/
 		await userAdminSeeder(queryRunner);
+		await missionSeeder(queryRunner);
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {
-		// No hay seeders que revertir
+		await missionDown(queryRunner);
 		await userAdminDown(queryRunner);
 	}
 }

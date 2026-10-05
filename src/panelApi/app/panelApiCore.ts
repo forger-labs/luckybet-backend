@@ -317,9 +317,10 @@ export class PanelApiCore implements ForPanelApiCore {
 		// 1. Obtener catálogo completo de juegos (cacheado en Redis)
 		const gameList = await this.userPanel.getGameList(options?.token);
 		// 2. Obtener historial deduplicado desde adminPanel
-		const history = await this.adminPanel.getLastPlayedGames(targetId, options);
+		//
+    const history = await this.adminPanel.getLastPlayedGames(targetId, options);
 
-		// 3. Cruzar cada juego con gameList para inyectar/confirmar imagen del CDN y metadata
+    // 3. Cruzar cada juego con gameList para inyectar/confirmar imagen del CDN y metadata
 		let games = history.games;
 		if (gameList && gameList.length > 0 && games?.length > 0) {
 			for (const game of games) {
