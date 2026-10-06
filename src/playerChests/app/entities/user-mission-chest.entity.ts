@@ -1,7 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
-import { Player } from '../../../players/app/entities/player.entity';
 import { MissionChest } from '../../../chests/app/entities/mission-chest.entity';
+import { Player } from '../../../players/app/entities/player.entity';
 import { RewardStatus } from '../../../rewards/app/enums';
 import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
@@ -9,6 +9,8 @@ import { User } from '../../../users/app/entities/user.entity';
 
 @Entity('user_mission_chests')
 @Index(['playerId', 'chestId', 'periodKey'], { unique: true })
+@Index(['status', 'claimedAt'])
+@Index(['periodKey', 'status'])
 export class UserMissionChest extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'player_id' })
 	playerId!: number;

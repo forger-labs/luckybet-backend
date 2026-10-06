@@ -9,6 +9,7 @@ import { RewardStatus } from '../enums';
 
 @Entity('mission_rewards')
 @Index(['playerId', 'status'])
+@Index(['status', 'claimedAt'])
 export class MissionReward extends BaseEntity {
 	@Column({ type: 'int', unique: true, nullable: false, name: 'user_mission_id' })
 	userMissionId!: number;

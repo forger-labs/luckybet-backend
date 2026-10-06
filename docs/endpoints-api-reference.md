@@ -1,6 +1,6 @@
 # Especificación de Integración de la API (Frontend / Clientes)
 
-> Guía exhaustiva y técnica para el equipo de frontend y clientes API. Contiene **todos** los endpoints de los 13 módulos del sistema, sus métodos HTTP, cabeceras requeridas, tokens de autorización, formato de contenido (`application/json` vs `multipart/form-data`) y los esquemas literales de JSON completos para cada petición (Request Body / Query Params) y respuesta (Response Body).
+> Guía exhaustiva y técnica para el equipo de frontend y clientes API. Contiene **todos** los endpoints de los 14 módulos del sistema, sus métodos HTTP, cabeceras requeridas, tokens de autorización, formato de contenido (`application/json` vs `multipart/form-data`) y los esquemas literales de JSON completos para cada petición (Request Body / Query Params) y respuesta (Response Body).
 
 ---
 
@@ -1459,7 +1459,273 @@ Controlador: `LevelRewardsController`
 
 ---
 
-### 2.12 Módulo: `Health` (`/api/v1.0/health`)
+### 2.12 Módulo: `Statistics` (`/api/v1.0/statistics`)
+
+Controladores: `StatisticsController` (Admin) y `StatisticsPublicController` (Público).
+
+#### Endpoints Administrativos (`SUPER_ADMIN`, `REVIEWER`)
+
+##### `GET /api/v1.0/statistics/summary`
+- **Propósito**: Resumen global de emisión de fichas regaladas (reclamadas) y conteos de eventos en un rango temporal.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `startDate` *(string ISO 8601, opcional)*: Fecha inicial (ej: `2026-03-01T00:00:00.000Z`).
+  - `endDate` *(string ISO 8601, opcional)*: Fecha final (ej: `2026-03-31T23:59:59.999Z`).
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Resumen de estadísticas obtenido exitosamente",
+    "data": {
+      "coinsBreakdown": {
+        "missionsCoins": 150000,
+        "levelsCoins": 85000,
+        "chestsCoins": 220000,
+        "totalCoins": 455000
+      },
+      "eventsCount": {
+        "completedMissionsCount": 1250,
+        "levelUpsCount": 420,
+        "claimedChestsCount": 180
+      }
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/liabilities`
+- **Propósito**: Reporte financiero de pasivo flotante (`PENDING`), volumen de fichas reclamadas (`CLAIMED`) y tasa de reclamo (% Claim Rate).
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `startDate` *(string ISO 8601, opcional)*
+  - `endDate` *(string ISO 8601, opcional)*
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Reporte de pasivos obtenido exitosamente",
+    "data": {
+      "pendingCoins": 35000,
+      "claimedCoins": 455000,
+      "claimRate": 92.86,
+      "pendingClaimsCount": 65,
+      "breakdown": {
+        "missionsPendingCoins": 12000,
+        "levelsPendingCoins": 8000,
+        "chestsPendingCoins": 15000
+      }
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/operational/risk`
+- **Propósito**: Monitoreo de incidencias y transacciones en estado `TIMEOUT_UNCERTAIN` con saldo retenido en riesgo.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `startDate` *(string ISO 8601, opcional)*
+  - `endDate` *(string ISO 8601, opcional)*
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Reporte de riesgo operativo obtenido exitosamente",
+    "data": {
+      "uncertainClaimsCount": 3,
+      "uncertainCoinsAmount": 4500,
+      "breakdown": {
+        "missions": {
+          "count": 1,
+          "coinsAmount": 1000
+        },
+        "levels": {
+          "count": 1,
+          "coinsAmount": 1500
+        },
+        "chests": {
+          "count": 1,
+          "coinsAmount": 2000
+        }
+      }
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/operational/reviewers-sla`
+- **Propósito**: Medición de SLA y rendimiento del equipo de moderadores/reviewers en la evaluación de submissions de misiones.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `startDate` *(string ISO 8601, opcional)*
+  - `endDate` *(string ISO 8601, opcional)*
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Reporte de SLA de revisores obtenido exitosamente",
+    "data": {
+      "globalAverageReviewTimeMinutes": 14.35,
+      "totalReviewedStepsCount": 350,
+      "reviewers": [
+        {
+          "adminId": 2,
+          "adminUsername": "reviewer_carlos",
+          "reviewedStepsCount": 200,
+          "approvedStepsCount": 180,
+          "rejectedStepsCount": 20,
+          "averageReviewTimeMinutes": 11.2
+        },
+        {
+          "adminId": 3,
+          "adminUsername": "reviewer_ana",
+          "reviewedStepsCount": 150,
+          "approvedStepsCount": 140,
+          "rejectedStepsCount": 10,
+          "averageReviewTimeMinutes": 18.55
+        }
+      ]
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/missions/engagement`
+- **Propósito**: Métricas de gamificación y engagement sobre misiones: tasa de completitud, abandonadas en progreso y tiempo promedio de completitud.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `startDate` *(string ISO 8601, opcional)*
+  - `endDate` *(string ISO 8601, opcional)*
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Métricas de engagement de misiones obtenidas exitosamente",
+    "data": {
+      "completionRate": 78.45,
+      "completedCount": 1250,
+      "inProgressCount": 280,
+      "cancelledOrExpiredCount": 63,
+      "averageCompletionMinutes": 48.2
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/levels/distribution`
+- **Propósito**: Pirámide de niveles: distribución de jugadores activos por cada nivel y porcentaje respecto a la base total de jugadores activos.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Distribución de jugadores por nivel obtenida exitosamente",
+    "data": {
+      "totalActivePlayers": 1500,
+      "distribution": [
+        {
+          "levelId": 1,
+          "levelName": "Bronce",
+          "minExperience": 0,
+          "playersCount": 900,
+          "percentage": 60
+        },
+        {
+          "levelId": 2,
+          "levelName": "Plata",
+          "minExperience": 1000,
+          "playersCount": 450,
+          "percentage": 30
+        },
+        {
+          "levelId": 3,
+          "levelName": "Oro",
+          "minExperience": 5000,
+          "playersCount": 150,
+          "percentage": 10
+        }
+      ]
+    }
+  }
+  ```
+
+##### `GET /api/v1.0/statistics/chests/summary`
+- **Propósito**: Progreso, adopción y distribución de fichas por cofre para un período determinado.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: **Admin JWT** (Cookie `accessToken`, roles `SUPER_ADMIN` o `REVIEWER`).
+- **Query Params**:
+  - `periodKey` *(string, opcional)*: Clave del período (ej: `"2026-W10"` o `"2026-03"`). Si se omite, calcula el período semanal actual ISO.
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Resumen de progreso de cofres obtenido exitosamente",
+    "data": {
+      "periodKey": "2026-W10",
+      "chests": [
+        {
+          "chestId": 1,
+          "chestTitle": "Cofre Semanal Bronce",
+          "requiredMissions": 5,
+          "coinsAmount": 500,
+          "periodType": "WEEKLY",
+          "participantsCount": 120,
+          "claimedCount": 95,
+          "claimRate": 79.17,
+          "totalCoinsDistributed": 47500
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+#### Endpoints Públicos / Gamificación
+
+##### `GET /api/v1.0/statistics/leaderboard`
+- **Propósito**: Ranking público de jugadores con más fichas acumuladas por recompensas (misiones + niveles + cofres). Ideal para tablas de clasificación en la UI de clientes y jugadores.
+- **Tipo de Contenido**: Sin cuerpo.
+- **Autenticación / Token**: Pública (Ninguno).
+- **Query Params**:
+  - `period` *(enum: `"WEEKLY"` | `"MONTHLY"` | `"ALL_TIME"`, default: `"ALL_TIME"`)*: Período a consultar.
+  - `limit` *(number, default: 20, max: 100)*: Cantidad máxima de jugadores en el ranking.
+- **Respuesta (`200 OK`)**:
+  ```json
+  {
+    "status": true,
+    "message": "Ranking de jugadores obtenido exitosamente",
+    "data": {
+      "period": "WEEKLY",
+      "startDate": "2026-03-09T00:00:00.000Z",
+      "endDate": "2026-03-15T23:59:59.999Z",
+      "leaderboard": [
+        {
+          "rank": 1,
+          "playerId": 10,
+          "username": "luckymaster",
+          "totalCoins": 25000,
+          "missionsCoins": 10000,
+          "levelsCoins": 5000,
+          "chestsCoins": 10000
+        },
+        {
+          "rank": 2,
+          "playerId": 15,
+          "username": "gaby_player",
+          "totalCoins": 18000,
+          "missionsCoins": 8000,
+          "levelsCoins": 5000,
+          "chestsCoins": 5000
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### 2.13 Módulo: `Health` (`/api/v1.0/health`)
 
 Controlador: `HealthController`
 

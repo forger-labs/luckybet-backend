@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
 import { Player } from '../../../players/app/entities/player.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
@@ -8,6 +8,8 @@ import type { UserMissionStep } from './user-mission-step.entity';
 
 // TODO: delete base entity because started_at and created_at have the same responsability
 @Entity('user_missions')
+@Index(['status', 'completedAt'])
+@Index(['status', 'startedAt'])
 export class UserMission extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'player_id' })
 	playerId!: number;

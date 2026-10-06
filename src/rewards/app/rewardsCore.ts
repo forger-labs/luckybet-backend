@@ -279,7 +279,6 @@ export class RewardsCore implements ForManageRewards {
 				externalOperationId: options?.externalOperationId ?? reward.externalOperationId,
 				errorMessage: options?.adminNotes ? `Resuelto: ${options.adminNotes}` : undefined,
 				resolvedByAdminId: adminId,
-				claimedAt: new Date(),
 			});
 		}
 
