@@ -11,16 +11,27 @@ import { CACHE_PORT, REDIS_CLIENT } from './constants';
 		{
 			provide: REDIS_CLIENT,
 			inject: [ConfigService],
-			useFactory: (config: ConfigService) => {
+      useFactory: (config: ConfigService) => {
+        const redisUrl = config.get<string>('REDIS_URL');
+
+        if (redisUrl) {
+          return new Redis(redisUrl, {
+            // Si la URL empieza por rediss://, ioredis activa TLS automáticamente
+            maxRetriesPerRequest: 3,
+          });
+        }
+
 				const host = config.get<string>('REDIS_HOST', 'localhost');
 				const port = Number(config.get<number | string>('REDIS_PORT', 6379));
 				const password = config.get<string>('REDIS_PASSWORD');
+        const useTls = config.get<string>('REDIS_TLS') === 'true' || host.includes('upstash.io');
 
-				return new Redis({
+        return new Redis({
 					host,
 					port,
 					password: password || undefined,
-					lazyConnect: true,
+          lazyConnect: true,
+					tls: useTls ? {} : undefined,
 					retryStrategy: (times: number) => {
 						if (times > 5) {
 							return null;
