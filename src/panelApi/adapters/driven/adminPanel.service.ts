@@ -498,7 +498,7 @@ export class AdminPanelService implements ForAdminPanel {
 
 		if (sessions.length > 0) {
 			for (const item of sessions) {
-				const gameIdentifier = item.game_id|| item.game_name  ;
+				const gameIdentifier = item.game_id || item.game_name;
 				if (!gameIdentifier) continue;
 
 				const rawId = String(gameIdentifier);
