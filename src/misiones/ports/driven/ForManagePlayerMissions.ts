@@ -1,37 +1,70 @@
+import type { UploadableFile } from '../../../shared/storage/storage.port';
 import type {
-  StepSubmission,
-  UserMissionBasic,
-  UserMissionWithSteps,
+	ReviewQueueItem,
+	StepSubmission,
+	UserMissionBasic,
+	UserMissionFilter,
+	UserMissionWithSteps,
 } from '../../app/dto/mission.schema';
-import { StepStatus } from '../../app/enums';
+import { StepStatus, UserMissionStatus } from '../../app/enums';
+
+export type PlayerMissionsQueueFilters = {
+	status?: UserMissionStatus;
+	playerId?: number;
+	minExperience?: number;
+	maxExperience?: number;
+	maxCoinsAmount?: number;
+	minCoinsAmount?: number;
+	type?: string;
+	take?: number;
+	skip?: number;
+};
+
+export type PlayerMissionsQueueResult = {
+	items: ReviewQueueItem[];
+	total: number;
+	limit: number;
+	skip: number;
+};
 
 export interface ForManagePlayerMissions {
-  startMission(playerId: number, missionId: number): Promise<UserMissionBasic>;
+	startMission(playerId: number, missionId: number): Promise<UserMissionBasic>;
 
-  submitStep(
-    userMissionId: number,
-    stepId: number,
-    data: { submissionText?: string; submissionImageUrl?: string },
-  ): Promise<StepSubmission>;
+	submitStep(
+		userMissionId: number,
+		stepId: number,
+		data: { submissionText?: string; submissionImage?: UploadableFile },
+		playerId?: number,
+	): Promise<StepSubmission>;
 
-  reviewStep(
-    stepId: number,
-    status: StepStatus.APPROVED | StepStatus.REJECTED,
-    adminId: number,
-    notes?: string,
-  ): Promise<StepSubmission>;
+	verifyAutoStep(
+		userMissionId: number,
+		stepId: number,
+		playerId: number,
+		username: string,
+		token?: string,
+	): Promise<StepSubmission>;
 
-  getPlayerMissions(
-    playerId: number,
-    params: { take?: number; skip?: number },
-  ): Promise<{
-    missions: UserMissionBasic[];
-    total: number;
-    limit: number;
-    skip: number;
-  }>;
+	reviewStep(
+		stepId: number,
+		status: StepStatus.APPROVED | StepStatus.REJECTED,
+		adminId: number,
+		notes?: string,
+	): Promise<StepSubmission>;
 
-  getPlayerMission(id: number): Promise<UserMissionWithSteps>;
+	getPlayerMissions(
+		playerId: number,
+		filter?: UserMissionFilter,
+	): Promise<{
+		missions: UserMissionWithSteps[];
+		total: number;
+		limit: number;
+		skip: number;
+	}>;
 
-  getReviewQueue(): Promise<StepSubmission[]>;
+	getPlayerMission(id: number, playerId?: number): Promise<UserMissionWithSteps>;
+
+	getPlayerMissionsQueue(
+		filters: PlayerMissionsQueueFilters,
+	): Promise<PlayerMissionsQueueResult>;
 }

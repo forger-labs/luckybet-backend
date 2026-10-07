@@ -1,5 +1,5 @@
-import { StepStatus } from '../../app/enums';
 import type { StepSubmission } from '../../app/dto/mission.schema';
+import { StepStatus } from '../../app/enums';
 
 export interface ForDatabaseUserMissionSteps {
 	createOrUpdateSubmission(data: {
@@ -8,6 +8,8 @@ export interface ForDatabaseUserMissionSteps {
 		submissionText?: string;
 		submissionImageUrl?: string;
 	}): Promise<StepSubmission>;
+
+	findById(id: number): Promise<StepSubmission | null>;
 
 	findByUserMissionAndStep(
 		userMissionId: number,
@@ -22,6 +24,4 @@ export interface ForDatabaseUserMissionSteps {
 		adminId: number,
 		notes?: string,
 	): Promise<StepSubmission>;
-
-	findPendingReviews(): Promise<StepSubmission[]>;
 }

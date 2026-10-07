@@ -31,7 +31,9 @@ describe('UserRepoService (integration — PostgreSQL real)', () => {
 	}, 60_000);
 
 	beforeEach(async () => {
-		await userRepo.clear();
+		// Use DELETE instead of TRUNCATE (Repository.clear): missions.created_by
+		// references admin_users, so a plain TRUNCATE fails with an FK error.
+		await userRepo.createQueryBuilder().delete().execute();
 	});
 
 	// ── createUser ─────────────────────────────────────────────────

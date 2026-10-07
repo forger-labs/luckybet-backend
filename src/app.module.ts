@@ -5,11 +5,22 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { AuthModule } from './auth/auth.module';
+import { ChestsModule } from './chests/chests.module';
 import { HealthModule } from './health/health.module';
+import { LevelRewardsModule } from './levelRewards/levelRewards.module';
+import { LevelsModule } from './levels/levels.module';
 import { MisionesModule } from './misiones/misiones.module';
+import { PanelModule } from './panelApi/panel.module';
+import { PlayerChestsModule } from './playerChests/playerChests.module';
+import { PlayersModule } from './players/players.module';
+import { RewardsModule } from './rewards/rewards.module';
+import { RoomsModule } from './rooms/rooms.module';
+import { CacheModule } from './shared/cache/cache.module';
 import { buildTypeOrmOptionsFromConfig } from './shared/database/databaseOptions';
 import { RequestLoggerInterceptor } from './shared/interceptors/requestLogger.interceptor';
 import { LoggerModule } from './shared/logger/logger.module';
+import { StorageModule } from './shared/storage/storage.module';
+import { StatisticsModule } from './statistics/statistics.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -19,11 +30,22 @@ import { UsersModule } from './users/users.module';
 			inject: [ConfigService],
 			useFactory: (config: ConfigService) => buildTypeOrmOptionsFromConfig(config),
 		}),
+		LevelsModule,
 		HealthModule,
+		AuthModule,
 		UsersModule,
 		LoggerModule,
-		AuthModule,
+		StorageModule,
+		CacheModule,
+		PanelModule,
+		RoomsModule,
+		PlayersModule,
 		MisionesModule,
+		RewardsModule,
+		ChestsModule,
+		PlayerChestsModule,
+		LevelRewardsModule,
+		StatisticsModule,
 	],
 	providers: [
 		{ provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },

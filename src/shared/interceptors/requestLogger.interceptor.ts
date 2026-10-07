@@ -27,7 +27,7 @@ export class RequestLoggerInterceptor implements NestInterceptor {
 	intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
 		const http = context.switchToHttp();
 		const request = http.getRequest<FastifyRequest>();
-		const { method, url, body } = request;
+		const { method, url } = request;
 
 		const now = Date.now();
 
@@ -38,9 +38,9 @@ export class RequestLoggerInterceptor implements NestInterceptor {
 					`${method} ${url} ${response.statusCode} - ${Date.now() - now}ms`,
 				);
 
-				if (body && Object.keys(body).length > 0) {
-					this.logger.log(`Request Body: ${JSON.stringify(body, null, 2)}`);
-				}
+				// if (body && Object.keys(body).length > 0) {
+				// 	this.logger.log(`Request Body: ${JSON.stringify(body, null, 2)}`);
+				// }
 			}),
 		);
 	}

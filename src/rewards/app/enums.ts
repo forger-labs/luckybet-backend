@@ -1,0 +1,8 @@
+export enum RewardStatus {
+	PENDING = 'PENDING',
+	PROCESSING = 'PROCESSING',
+	CLAIMED = 'CLAIMED',
+	TIMEOUT_UNCERTAIN = 'TIMEOUT_UNCERTAIN',
+}
+
+export type RewardAction = 'RESOLVE_CLAIMED' | 'FORCE_RETRY';

@@ -1,11 +1,6 @@
-import {
-	Column,
-	Entity,
-	JoinColumn,
-	ManyToOne,
-	OneToMany,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
+import { BonusRoom } from '../../../rooms/app/entities/bonus-room.entity';
 import { BaseEntity } from '../../../shared/entities/base.entity';
 import { User } from '../../../users/app/entities/user.entity';
 import { MissionStatus, MissionType } from '../enums';
@@ -33,11 +28,15 @@ export class Mission extends BaseEntity {
 	@Column({ type: 'int', nullable: false, name: 'coins_amount' })
 	coinsAmount!: number;
 
-	@Column({ type: 'int', nullable: true })
-	bonus?: number;
-
 	@Column({ type: 'int', nullable: false, name: 'experience_points' })
 	experiencePoints!: number;
+
+	@Column({ type: 'int', nullable: true, name: 'room_id' })
+	roomId?: number | null;
+
+	@ManyToOne(() => BonusRoom, { nullable: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'room_id' })
+	room?: BonusRoom | null;
 
 	@Column({ type: 'varchar', length: 500, nullable: true, name: 'image_url' })
 	imageUrl?: string;
