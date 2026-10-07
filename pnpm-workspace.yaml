@@ -3,4 +3,6 @@ allowBuilds:
   cpu-features: true
   protobufjs: true
   ssh2: true
-  nestjs/core: true
+  "@nestjs/core": true
+  "@scarf/scarf": true
+  unrs-resolver: true
