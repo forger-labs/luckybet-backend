@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import axios from 'axios';
 
+import { formatInTz, nowInTz } from '@/src/shared/utils/date.util';
 import { CACHE_PORT } from '../../../shared/cache/constants';
 import type { ForCache } from '../../../shared/cache/ports/forCache.port';
 import {
@@ -129,10 +130,10 @@ export class AdminPanelService implements ForAdminPanel {
 	 * Returns a valid PHPSESSID session from Redis or performs authentication.
 	 */
 	async ensureSession(): Promise<string> {
-		// const cachedSession = await this.cache.get<string>(LUCKYBET_ADMIN_SESSION_CACHE_KEY);
-		// if (cachedSession) {
-		// 	return cachedSession;
-		// }
+		const cachedSession = await this.cache.get<string>(LUCKYBET_ADMIN_SESSION_CACHE_KEY);
+		if (cachedSession) {
+			return cachedSession;
+		}
 
 		if (this.loginPromise !== null) {
 			return await this.loginPromise;
@@ -165,7 +166,7 @@ export class AdminPanelService implements ForAdminPanel {
 				},
 				maxRedirects: 0,
 				validateStatus: status => status === 200 || status === 302,
-      });
+			});
 
 			const rawSetCookie =
 				response.headers['set-cookie'] || response.headers['Set-Cookie'];
@@ -396,7 +397,7 @@ export class AdminPanelService implements ForAdminPanel {
 					Cookie: `PHPSESSID=${String(sessionId)}`,
 				},
 			});
-    });
+		});
 
 		const operationId = this.extractOperationId(data.printUrl as string);
 
@@ -480,10 +481,10 @@ export class AdminPanelService implements ForAdminPanel {
 			}
 		}
 
-		const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
-		const toDateStr = this.formatDate(now);
-		const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-		const fromDateStr = this.formatDate(fromDate);
+		const nowDt = nowInTz();
+		const toDateStr = formatInTz(nowDt, 'yyyy-MM-dd HH:mm:ss');
+		const fromDateDt = nowDt.minus({ days });
+		const fromDateStr = formatInTz(fromDateDt, 'yyyy-MM-dd HH:mm:ss');
 
 		// 1. Query native area=history game session endpoint
 		const historyRes = await this.getPlayerHistory(userId, {
@@ -492,12 +493,12 @@ export class AdminPanelService implements ForAdminPanel {
 			limit: 1000,
 		});
 
-    const sessions = historyRes.sessions ?? historyRes.history ?? [];
+		const sessions = historyRes.sessions ?? historyRes.history ?? [];
 		const deduplicatedGames = new Map<string, PlayedGame>();
 
 		if (sessions.length > 0) {
 			for (const item of sessions) {
-				const gameIdentifier = item.game || item.game_name;
+				const gameIdentifier = item.game_id|| item.game_name  ;
 				if (!gameIdentifier) continue;
 
 				const rawId = String(gameIdentifier);
@@ -533,8 +534,7 @@ export class AdminPanelService implements ForAdminPanel {
 				img?: string;
 				label?: string;
 			}>
-      >(LUCKYBET_GAME_CATALOG_CACHE_KEY);
-
+		>(LUCKYBET_GAME_CATALOG_CACHE_KEY);
 
 		if (catalog && Array.isArray(catalog)) {
 			for (const game of deduplicatedGames.values()) {
@@ -568,21 +568,10 @@ export class AdminPanelService implements ForAdminPanel {
 			to: toDateStr,
 			games: gamesList,
 			totalUniqueGames: deduplicatedGames.size,
-    };
+		};
 
 		await this.cache.set(cacheKey, result, options?.ttl ?? this.gameActivityTtl);
 		return result;
-	}
-
-	private formatDate(date: Date): string {
-		const pad = (n: number) => String(n).padStart(2, '0');
-		const y = date.getFullYear();
-		const m = pad(date.getMonth() + 1);
-		const d = pad(date.getDate());
-		const h = pad(date.getHours());
-		const min = pad(date.getMinutes());
-		const s = pad(date.getSeconds());
-		return `${y}-${m}-${d} ${h}:${min}:${s}`;
 	}
 
 	private formatGameName(rawName: string): string {

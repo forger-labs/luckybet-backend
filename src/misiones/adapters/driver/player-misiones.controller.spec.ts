@@ -30,8 +30,8 @@ describe('PlayerMisionesController', () => {
 		missionId: 2,
 		status: 'IN_PROGRESS',
 		currentStep: 1,
-    startedAt: new Date(),
-    steps: []
+		startedAt: new Date(),
+		steps: [],
 	};
 
 	const mockStepSubmission = {
@@ -129,7 +129,13 @@ describe('PlayerMisionesController', () => {
 
 			const result = await controller.verifyAutoStep(1, 3, mockPlayer, 'token123');
 
-			expect(mockCore.verifyAutoStep).toHaveBeenCalledWith(1, 3, 10, 'token123');
+			expect(mockCore.verifyAutoStep).toHaveBeenCalledWith(
+				1,
+				3,
+				10,
+				'testplayer',
+				'token123',
+			);
 			expect(result).toEqual({
 				data: {
 					...mockStepSubmission,

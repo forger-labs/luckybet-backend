@@ -1,3 +1,5 @@
+process.env.TZ = 'UTC';
+
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 

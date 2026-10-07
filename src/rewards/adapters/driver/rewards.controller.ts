@@ -59,7 +59,7 @@ export class RewardsController {
 	) {
 		const result = await this.rewardsCore.claimReward(userMissionId, player.id);
 		return buildResponse(result, 'Recompensa reclamada exitosamente', true);
-  }
+	}
 
 	@Get()
 	@UseGuards(PlayerTokenGuard)
@@ -87,9 +87,9 @@ export class RewardsController {
 			true,
 			{ limit: result.limit, skip: result.skip, total: result.total },
 		);
-  }
+	}
 
-  @Get(':userMissionId')
+	@Get(':userMissionId')
 	@UseGuards(PlayerTokenGuard)
 	@HttpCode(HttpStatus.OK)
 	@ApiHeader({
@@ -105,7 +105,6 @@ export class RewardsController {
 		const result = await this.rewardsCore.findClaimRewardByUMId(userMissionId, player.id);
 		return buildResponse(result, 'Recompensa obtenida exitosamente', true);
 	}
-
 
 	// ─── Admin Endpoints ───────────────────────────────────────────
 

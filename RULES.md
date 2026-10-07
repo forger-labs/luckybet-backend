@@ -40,11 +40,11 @@ This is an Nest-based Solana project composed of multiple services to listen to 
 
 Run in this exact order after every change. A failure in any step blocks the next.
 
-1. yarn lint
-2. yarn test:unit
-3. yarn test:e2e
-4. yarn build:clean
-5. yarn build 
+1. pnpm run lint
+2. pnpm run test:unit
+3. pnpm run test:e2e
+4. pnpm run build:clean
+5. pnpm run build 
 
 ---
 

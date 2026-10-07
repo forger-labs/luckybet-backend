@@ -77,11 +77,11 @@ export class UserMissionStepRepoService implements ForDatabaseUserMissionSteps {
 		const step = await this.stepModel.findOne({ where: { id } });
 		if (!step) throw new Error('Step submission not found');
 
-    step.status = status;
-    if (adminId > 0) {
-		  step.reviewedById = adminId;
-    }
-    step.reviewedAt = new Date();
+		step.status = status;
+		if (adminId > 0) {
+			step.reviewedById = adminId;
+		}
+		step.reviewedAt = new Date();
 		step.reviewerNotes = notes;
 
 		const saved = await this.stepModel.save(step);

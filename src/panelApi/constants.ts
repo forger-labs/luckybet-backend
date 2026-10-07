@@ -13,7 +13,7 @@ export const LUCKYBET_BEFORE_TOKEN_CACHE_KEY = 'luckybet:auth:before_token';
 export const LUCKYBET_PLAYER_SESSION_KEY_PREFIX = 'luckybet:session:token:';
 
 export const DEFAULT_LUCKYBET_SESSION_TTL_SECONDS = 240; // 4 minutes
-export const DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS = 300; // 5 minutes
+export const DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS = 150; // 2.5 minutes
 export const DEFAULT_LUCKYBET_GAME_CATALOG_TTL_SECONDS = 86_400; // 24 hours
 export const DEFAULT_LUCKYBET_PROVIDERS_TTL_SECONDS = 86_400; // 24 hours
 export const DEFAULT_LUCKYBET_BEFORE_TOKEN_TTL_SECONDS = 48_200; // 24 hours

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { getPeriodRange } from '@/src/shared/utils/date.util';
 import type { ForManageStatistics } from '../ports/driven/forManageStatistics';
 import type { ForDatabaseStatistics } from '../ports/driver/forDatabaseStatistics';
 import { STATISTICS_REPO_PROVIDER } from './constants';
@@ -92,27 +93,12 @@ export class StatisticsCore implements ForManageStatistics {
 
 		let dateRange: { startDate: Date; endDate: Date } | undefined;
 
-		const now = new Date();
 		if (period === LeaderboardPeriod.WEEKLY) {
-			const day = now.getDay();
-			const diffToMonday = day === 0 ? -6 : 1 - day;
-			const monday = new Date(now);
-			monday.setDate(now.getDate() + diffToMonday);
-			monday.setHours(0, 0, 0, 0);
-
-			const sunday = new Date(monday);
-			sunday.setDate(monday.getDate() + 6);
-			sunday.setHours(23, 59, 59, 999);
-
-			dateRange = { startDate: monday, endDate: sunday };
+			const range = getPeriodRange('WEEKLY');
+			dateRange = { startDate: range.startDate, endDate: range.endDate };
 		} else if (period === LeaderboardPeriod.MONTHLY) {
-			const y = now.getFullYear();
-			const m = now.getMonth();
-			const startDate = new Date(y, m, 1, 0, 0, 0, 0);
-			const nextMonthStart = new Date(y, m + 1, 1, 0, 0, 0, 0);
-			const endDate = new Date(nextMonthStart.getTime() - 1);
-
-			dateRange = { startDate, endDate };
+			const range = getPeriodRange('MONTHLY');
+			dateRange = { startDate: range.startDate, endDate: range.endDate };
 		}
 
 		const entries = await this.repo.getLeaderboard(limit, dateRange);

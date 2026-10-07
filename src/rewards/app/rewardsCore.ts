@@ -45,17 +45,20 @@ export class RewardsCore implements ForManageRewards {
 		return await this.rewardRepo.createReward(data);
 	}
 
-  async findClaimRewardByUMId(userMissionId: number, playerId: number): Promise<MissionRewardBasic> {
-    const existing = await this.rewardRepo.findByUserMissionId(userMissionId);
-    if (!existing) {
+	async findClaimRewardByUMId(
+		userMissionId: number,
+		playerId: number,
+	): Promise<MissionRewardBasic> {
+		const existing = await this.rewardRepo.findByUserMissionId(userMissionId);
+		if (!existing) {
 			throw new NotFoundException('Recompensa no encontrada para esta mision');
-    }
+		}
 
-    if (existing.playerId !== playerId) {
+		if (existing.playerId !== playerId) {
 			throw new ForbiddenException('No tienes permiso para reclamar esta recompensa');
-    }
+		}
 
-		return existing
+		return existing;
 	}
 
 	async claimReward(
@@ -142,7 +145,7 @@ export class RewardsCore implements ForManageRewards {
 			operationId?: string | null;
 			errorMessage?: string;
 		} | null = null;
-    try {
+		try {
 			mutationResult = await this.panelApi.creditPlayer(
 				playerIdentifier,
 				existing.coinsAmount,
@@ -163,7 +166,7 @@ export class RewardsCore implements ForManageRewards {
 							: 'Error desconocido de conexion al acreditar',
 				},
 			);
-    }
+		}
 		if (!mutationResult.success) {
 			this.logger.error(
 				`Error reportado por LuckyBet al acreditar fichas: ${mutationResult.errorMessage}`,

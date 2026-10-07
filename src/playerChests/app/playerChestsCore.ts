@@ -19,6 +19,7 @@ import type { ForManagePlayers } from '../../players/ports/driven/ForManagePlaye
 import { RewardAction, RewardStatus } from '../../rewards/app/enums';
 import { FOR_DATABASE_ROOMS } from '../../rooms/app/constants';
 import type { ForDatabaseRooms } from '../../rooms/ports/driver/ForDatabaseRooms';
+import { getPeriodRange } from '../../shared/utils/date.util';
 import type { ForManagePlayerChests } from '../ports/driven/ForManagePlayerChests';
 import type { ForDatabasePlayerChests } from '../ports/driver/ForDatabasePlayerChests';
 import { FOR_DATABASE_PLAYER_CHESTS } from './constants';
@@ -541,40 +542,6 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		endDate: Date;
 		periodKey: string;
 	} {
-		const now = new Date();
-
-		if (periodType === ChestPeriodType.MONTHLY) {
-			const y = now.getFullYear();
-			const m = now.getMonth();
-			const startDate = new Date(y, m, 1, 0, 0, 0, 0);
-			const nextMonthStart = new Date(y, m + 1, 1, 0, 0, 0, 0);
-			const endDate = new Date(nextMonthStart.getTime() - 1);
-			const monthStr = String(m + 1).padStart(2, '0');
-			const periodKey = `${y}-${monthStr}`;
-			return { startDate, endDate, periodKey };
-		}
-
-		// Default WEEKLY (Semana ISO: Lunes a Domingo)
-		const day = now.getDay();
-		const diffToMonday = day === 0 ? -6 : 1 - day;
-
-		const monday = new Date(now);
-		monday.setDate(now.getDate() + diffToMonday);
-		monday.setHours(0, 0, 0, 0);
-
-		const sunday = new Date(monday);
-		sunday.setDate(monday.getDate() + 6);
-		sunday.setHours(23, 59, 59, 999);
-
-		// Calcular número de semana ISO
-		const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-		const dayNum = d.getUTCDay() || 7;
-		d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-		const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-		const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
-		const weekStr = String(weekNo).padStart(2, '0');
-		const periodKey = `${d.getUTCFullYear()}-W${weekStr}`;
-
-		return { startDate: monday, endDate: sunday, periodKey };
+		return getPeriodRange(periodType as 'WEEKLY' | 'MONTHLY');
 	}
 }

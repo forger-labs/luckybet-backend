@@ -1,3 +1,5 @@
+process.env.TZ = 'UTC';
+
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import { ConfigService } from '@nestjs/config';

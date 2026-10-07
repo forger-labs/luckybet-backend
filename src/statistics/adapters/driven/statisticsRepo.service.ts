@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { type ObjectLiteral, Repository, type SelectQueryBuilder } from 'typeorm';
 
+import {
+	DEFAULT_TIMEZONE,
+	getWeeklyPeriodKey,
+	parseDateInTz,
+} from '@/src/shared/utils/date.util';
 import { MissionChest } from '../../../chests/app/entities/mission-chest.entity';
 import { LevelReward } from '../../../levelRewards/app/entities/level-reward.entity';
 import { LevelsEntity } from '../../../levels/app/entities/levels.entity';
@@ -20,9 +25,7 @@ import type {
 	MissionsEngagement,
 } from '../../app/dto/statistics-engagement.schema';
 import type { DateRangeFilter } from '../../app/dto/statistics-filter.schema';
-import type {
-	LeaderboardEntry,
-} from '../../app/dto/statistics-leaderboard.schema';
+import type { LeaderboardEntry } from '../../app/dto/statistics-leaderboard.schema';
 import type {
 	OperationalRisk,
 	ReviewerSlaItem,
@@ -72,11 +75,13 @@ export class StatisticsRepoService implements ForDatabaseStatistics {
 	): void {
 		if (filter?.startDate) {
 			qb.andWhere(`${dateColumn} >= :startDate`, {
-				startDate: new Date(filter.startDate),
+				startDate: parseDateInTz(filter.startDate, DEFAULT_TIMEZONE, false),
 			});
 		}
 		if (filter?.endDate) {
-			qb.andWhere(`${dateColumn} <= :endDate`, { endDate: new Date(filter.endDate) });
+			qb.andWhere(`${dateColumn} <= :endDate`, {
+				endDate: parseDateInTz(filter.endDate, DEFAULT_TIMEZONE, true),
+			});
 		}
 	}
 
@@ -557,11 +562,10 @@ export class StatisticsRepoService implements ForDatabaseStatistics {
 	): Promise<LeaderboardEntry[]> {
 		const params: (number | Date)[] = [limit];
 		let dateCondition = '';
-    // TODO: add tight date range filtering for leaderboard queries. If we allow dateRange without an extreme then we might be fetching a lot of data. For now, we will only allow dateRange if both startDate and endDate are provided.
+		// TODO: add tight date range filtering for leaderboard queries. If we allow dateRange without an extreme then we might be fetching a lot of data. For now, we will only allow dateRange if both startDate and endDate are provided.
 		if (dateRange?.startDate && dateRange?.endDate) {
 			params.push(dateRange.startDate, dateRange.endDate);
-			dateCondition =
-				'AND claimed_at >= $2 AND claimed_at <= $3';
+			dateCondition = 'AND claimed_at >= $2 AND claimed_at <= $3';
 		} else if (dateRange?.startDate) {
 			params.push(dateRange.startDate);
 			dateCondition = 'AND claimed_at >= $2';

@@ -6,9 +6,7 @@ import type {
 	MissionsEngagement,
 } from '../../app/dto/statistics-engagement.schema';
 import type { DateRangeFilter } from '../../app/dto/statistics-filter.schema';
-import type {
-	LeaderboardEntry,
-} from '../../app/dto/statistics-leaderboard.schema';
+import type { LeaderboardEntry } from '../../app/dto/statistics-leaderboard.schema';
 import type {
 	OperationalRisk,
 	ReviewersSla,

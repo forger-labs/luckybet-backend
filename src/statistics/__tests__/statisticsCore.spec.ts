@@ -248,11 +248,7 @@ describe('StatisticsCore', () => {
 				limit: 10,
 			});
 
-			expect(mockRepo.getLeaderboard).toHaveBeenCalledWith(
-				LeaderboardPeriod.ALL_TIME,
-				10,
-				undefined,
-			);
+			expect(mockRepo.getLeaderboard).toHaveBeenCalledWith(10, undefined);
 			expect(result).toEqual({
 				period: LeaderboardPeriod.ALL_TIME,
 				startDate: null,
@@ -270,7 +266,6 @@ describe('StatisticsCore', () => {
 			});
 
 			expect(mockRepo.getLeaderboard).toHaveBeenCalledWith(
-				LeaderboardPeriod.WEEKLY,
 				20,
 				expect.objectContaining({
 					startDate: expect.any(Date),

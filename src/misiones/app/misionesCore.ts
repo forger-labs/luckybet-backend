@@ -1,7 +1,7 @@
 import {
 	BadRequestException,
-	Logger,
 	ForbiddenException,
+	Logger,
 	NotFoundException,
 } from '@nestjs/common';
 
@@ -227,7 +227,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			throw new BadRequestException('La mision no esta activa');
 		}
 
-		if (mission.expiresAt && new Date() > mission.expiresAt) {
+		if (mission.expiresAt && mission.expiresAt.getTime() <= Date.now()) {
 			throw new BadRequestException('La mision ha expirado');
 		}
 
@@ -260,11 +260,11 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		}
 
 		const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
-    if (!mission) throw new NotFoundException('Mision no encontrada');
+		if (!mission) throw new NotFoundException('Mision no encontrada');
 
-    if (mission.expiresAt && mission.expiresAt.getTime() <= Date.now()) {
-      throw new BadRequestException("La mision ya expiro")
-    }
+		if (mission.expiresAt && mission.expiresAt.getTime() <= Date.now()) {
+			throw new BadRequestException('La mision ya expiro');
+		}
 
 		const stepDef = mission.steps.find(s => s.id === stepId);
 		if (!stepDef) throw new NotFoundException('Paso no encontrado en la mision');
@@ -278,11 +278,15 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		// Validate if the step has already been approved
 		const existingStep = um.steps?.find(s => s.missionStepId === stepId);
 		if (existingStep?.status === StepStatus.APPROVED) {
-			throw new BadRequestException('Este paso ya ha sido aprobado y no puede modificarse');
-    }
+			throw new BadRequestException(
+				'Este paso ya ha sido aprobado y no puede modificarse',
+			);
+		}
 
-    if (existingStep?.status === StepStatus.PENDING) {
-			throw new BadRequestException('Este paso está pendiente por revision y no puede modificarse');
+		if (existingStep?.status === StepStatus.PENDING) {
+			throw new BadRequestException(
+				'Este paso está pendiente por revision y no puede modificarse',
+			);
 		}
 
 		let submissionText: string | undefined;
@@ -332,7 +336,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 	async verifyAutoStep(
 		userMissionId: number,
 		stepId: number,
-    playerId: number,
+		playerId: number,
 		username: string,
 		token?: string,
 	): Promise<StepSubmission> {
@@ -348,11 +352,11 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		}
 
 		const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
-    if (!mission) throw new NotFoundException('Mision no encontrada');
+		if (!mission) throw new NotFoundException('Mision no encontrada');
 
-    if (mission.expiresAt && mission.expiresAt.getTime() <= Date.now()) {
-      throw new BadRequestException("La mision ya expiro")
-    }
+		if (mission.expiresAt && mission.expiresAt.getTime() <= Date.now()) {
+			throw new BadRequestException('La mision ya expiro');
+		}
 
 		const stepDef = mission.steps.find(s => s.id === stepId);
 		if (!stepDef) throw new NotFoundException('Paso no encontrado en la mision');
@@ -378,9 +382,9 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			gameName: targetConfig?.gameId,
 			days,
 			token,
-      ttl: 10,
+			ttl: 10,
 			forceRefresh: true,
-    });
+		});
 
 		const requiredUniqueGames = targetConfig?.gameId
 			? 1
@@ -396,23 +400,23 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			throw new BadRequestException(
 				`Aun no cumples el requisito: se requieren ${requiredUniqueGames} juego(s) con apuesta mínima de ${minBet} y tienes ${qualifyingGames.length}`,
 			);
-    }
+		}
 
 		// Mark step approved by system
 
-    let submission = await this.stepRepo.findByUserMissionAndStep(userMissionId, stepId);
+		let submission = await this.stepRepo.findByUserMissionAndStep(userMissionId, stepId);
 
-    if (!submission) {
-       	submission = await this.stepRepo.createOrUpdateSubmission({
-  			userMissionId,
-  			missionStepId: stepId,
-  			submissionText: 'Verificado automaticamente por juego en LuckyBet',
-  		});
-    }
+		if (!submission) {
+			submission = await this.stepRepo.createOrUpdateSubmission({
+				userMissionId,
+				missionStepId: stepId,
+				submissionText: 'Verificado automaticamente por juego en LuckyBet',
+			});
+		}
 
-    if (submission.status === StepStatus.APPROVED) {
-      throw new BadRequestException("El paso ya fue aprobado")
-    }
+		if (submission.status === StepStatus.APPROVED) {
+			throw new BadRequestException('El paso ya fue aprobado');
+		}
 
 		await this.stepRepo.reviewStep(
 			submission.id,
@@ -453,30 +457,30 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		}
 
 		const previousStep = await this.stepRepo.findById(stepId);
-    if (!previousStep) throw new NotFoundException('Paso de usuario no encontrado');
+		if (!previousStep) throw new NotFoundException('Paso de usuario no encontrado');
 
 		const wasAlreadyApproved = previousStep.status === StepStatus.APPROVED;
 
-    const submission = await this.stepRepo.reviewStep(stepId, status, adminId, notes);
+		const submission = await this.stepRepo.reviewStep(stepId, status, adminId, notes);
 
-   	const um = await this.userMissionRepo.findById(submission.userMissionId);
+		const um = await this.userMissionRepo.findById(submission.userMissionId);
 		if (!um) throw new NotFoundException('Mision de usuario no encontrada');
 
-    const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
+		const mission = await this.missionRepo.findByIdWithSteps(um.missionId);
 		if (!mission) throw new NotFoundException('Mision no encontrada');
-    const totalSteps = mission.steps.length;
+		const totalSteps = mission.steps.length;
 
-    const mStep = mission.steps.find((mStep) => mStep.id === submission.missionStepId);
+		const mStep = mission.steps.find(mStep => mStep.id === submission.missionStepId);
 
-    if (!mStep) {
-      throw new NotFoundException("Paso de usuario no coincide con los registros")
-    }
+		if (!mStep) {
+			throw new NotFoundException('Paso de usuario no coincide con los registros');
+		}
 
-    if (mStep.type === StepType.GAME_PLAY) {
-      throw new BadRequestException("El paso de juegos se verifica automaticamente")
-    }
+		if (mStep.type === StepType.GAME_PLAY) {
+			throw new BadRequestException('El paso de juegos se verifica automaticamente');
+		}
 
-    // If transitioning to APPROVED and was not already approved, advance user mission
+		// If transitioning to APPROVED and was not already approved, advance user mission
 		if (status === StepStatus.APPROVED && !wasAlreadyApproved) {
 			const newCurrentStep = um.currentStep + 1;
 			await this.userMissionRepo.updateCurrentStep(um.id, newCurrentStep);
@@ -484,7 +488,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 			if (newCurrentStep >= totalSteps) {
 				await this.completeUserMission(um.id, mission, um.playerId);
 			}
-    } else if (status === StepStatus.REJECTED && wasAlreadyApproved) {
+		} else if (status === StepStatus.REJECTED && wasAlreadyApproved) {
 			const newCurrentStep = um.currentStep - 1;
 			await this.userMissionRepo.updateCurrentStep(um.id, newCurrentStep);
 		}

@@ -1,16 +1,26 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+	BadRequestException,
+	ForbiddenException,
+	NotFoundException,
+} from '@nestjs/common';
 
+import { UserWithoutPassword } from '@/src/users/app/dto/user.schema';
 import type { ForPanelApiCore } from '../../panelApi/ports/forPanelApiCore.port';
 import type { ForManagePlayers } from '../../players/ports/driven/ForManagePlayers';
 import type { ForManageRewards } from '../../rewards/ports/driven/ForManageRewards';
-import type { ForDatabaseUsers } from '../../users/ports/driver/ForDatabaseUsers';
 import type { StorageService, UploadableFile } from '../../shared/storage/storage.port';
+import type { ForDatabaseUsers } from '../../users/ports/driver/ForDatabaseUsers';
 import type { ForDatabaseMissions } from '../ports/driver/ForDatabaseMissions';
 import type { ForDatabaseUserMissionSteps } from '../ports/driver/ForDatabaseUserMissionSteps';
 import type { ForDatabaseUserMissions } from '../ports/driver/ForDatabaseUserMissions';
-import { MissionStatus, MissionType, StepStatus, StepType, UserMissionStatus } from './enums';
+import {
+	MissionStatus,
+	MissionType,
+	StepStatus,
+	StepType,
+	UserMissionStatus,
+} from './enums';
 import { MisionesCore } from './misionesCore';
-import { UserWithoutPassword } from '@/src/users/app/dto/user.schema';
 
 describe('MisionesCore - submitStep and step progress', () => {
 	let core: MisionesCore;
@@ -39,8 +49,20 @@ describe('MisionesCore - submitStep and step progress', () => {
 		roomId: null,
 		experiencePoints: 50,
 		steps: [
-			{ id: 10, missionId: 1, stepOrder: 1, type: StepType.IMAGE, content: 'Subir captura' },
-			{ id: 20, missionId: 1, stepOrder: 2, type: StepType.TEXT, content: 'Escribir feedback' },
+			{
+				id: 10,
+				missionId: 1,
+				stepOrder: 1,
+				type: StepType.IMAGE,
+				content: 'Subir captura',
+			},
+			{
+				id: 20,
+				missionId: 1,
+				stepOrder: 2,
+				type: StepType.TEXT,
+				content: 'Escribir feedback',
+			},
 			{
 				id: 30,
 				missionId: 1,
@@ -135,8 +157,8 @@ describe('MisionesCore - submitStep and step progress', () => {
 		mockRewardsCore = {
 			createReward: jest.fn(),
 			claimReward: jest.fn(),
-      listPlayerRewards: jest.fn(),
-      findClaimRewardByUMId: jest.fn(),
+			listPlayerRewards: jest.fn(),
+			findClaimRewardByUMId: jest.fn(),
 			listAllRewards: jest.fn(),
 			resolveUncertainReward: jest.fn(),
 		};
@@ -224,7 +246,12 @@ describe('MisionesCore - submitStep and step progress', () => {
 				submissionImageUrl: 'steps/new-uuid-image.png',
 			});
 
-			const result = await core.submitStep(100, 10, { submissionImage: mockImageFile }, 5);
+			const result = await core.submitStep(
+				100,
+				10,
+				{ submissionImage: mockImageFile },
+				5,
+			);
 
 			expect(mockStorage.uploadImage).toHaveBeenCalledWith(mockImageFile, 'steps');
 			expect(mockStepRepo.createOrUpdateSubmission).toHaveBeenCalledWith({
@@ -233,7 +260,9 @@ describe('MisionesCore - submitStep and step progress', () => {
 				submissionText: undefined,
 				submissionImageUrl: 'steps/new-uuid-image.png',
 			});
-			expect(result.submissionImageUrl).toBe('https://cdn.luckybet.com/steps/new-uuid-image.png');
+			expect(result.submissionImageUrl).toBe(
+				'https://cdn.luckybet.com/steps/new-uuid-image.png',
+			);
 		});
 
 		it('debería eliminar la imagen previa si se reenvía una nueva imagen en estado PENDING o REJECTED', async () => {
@@ -279,7 +308,12 @@ describe('MisionesCore - submitStep and step progress', () => {
 				submissionText: 'Excelente plataforma',
 			});
 
-			const result = await core.submitStep(100, 20, { submissionText: 'Excelente plataforma' }, 5);
+			const result = await core.submitStep(
+				100,
+				20,
+				{ submissionText: 'Excelente plataforma' },
+				5,
+			);
 
 			expect(mockStepRepo.createOrUpdateSubmission).toHaveBeenCalledWith({
 				userMissionId: 100,
@@ -293,7 +327,10 @@ describe('MisionesCore - submitStep and step progress', () => {
 
 	describe('reviewStep & currentStep counting', () => {
 		it('debería incrementar currentStep al aprobar un paso y completar misión si todos están aprobados', async () => {
-			mockUserRepo.findByUnique.mockResolvedValue({ id: 99, isActive: true } as unknown as UserWithoutPassword);
+			mockUserRepo.findByUnique.mockResolvedValue({
+				id: 99,
+				isActive: true,
+			} as unknown as UserWithoutPassword);
 			mockStepRepo.findById.mockResolvedValue({
 				id: 1,
 				userMissionId: 100,
@@ -317,7 +354,10 @@ describe('MisionesCore - submitStep and step progress', () => {
 			await core.reviewStep(1, StepStatus.APPROVED, 99, 'Todo correcto');
 
 			expect(mockUserMissionRepo.updateCurrentStep).toHaveBeenCalledWith(100, 3);
-			expect(mockUserMissionRepo.updateStatus).toHaveBeenCalledWith(100, UserMissionStatus.COMPLETED);
+			expect(mockUserMissionRepo.updateStatus).toHaveBeenCalledWith(
+				100,
+				UserMissionStatus.COMPLETED,
+			);
 			expect(mockPlayerCore.addExperienceAndRecalculateLevel).toHaveBeenCalledWith(5, 50);
 			expect(mockRewardsCore.createReward).toHaveBeenCalledWith({
 				userMissionId: 100,
@@ -329,7 +369,23 @@ describe('MisionesCore - submitStep and step progress', () => {
 		});
 
 		it('no debería duplicar el incremento de currentStep si el paso ya estaba APPROVED', async () => {
-			mockUserRepo.findByUnique.mockResolvedValue({ id: 99, isActive: true } as unknown as UserWithoutPassword);
+			mockUserRepo.findByUnique.mockResolvedValue({
+				id: 99,
+				isActive: true,
+			} as unknown as UserWithoutPassword);
+			mockUserMissionRepo.findById.mockResolvedValue({
+				id: 100,
+				missionId: 1,
+				playerId: 5,
+				currentStep: 1,
+				status: UserMissionStatus.IN_PROGRESS,
+			});
+			mockMissionRepo.findByIdWithSteps.mockResolvedValue({
+				id: 1,
+				coinsAmount: 100,
+				experiencePoints: 50,
+				steps: [{ id: 10, stepOrder: 1 }],
+			});
 			mockStepRepo.findById.mockResolvedValue({
 				id: 1,
 				userMissionId: 100,

@@ -48,13 +48,15 @@ export class StatisticsController {
 		name: 'startDate',
 		required: false,
 		type: String,
-		description: 'Fecha inicial ISO 8601',
+		description:
+			'Fecha/Hora inicial en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	@ApiQuery({
 		name: 'endDate',
 		required: false,
 		type: String,
-		description: 'Fecha final ISO 8601',
+		description:
+			'Fecha/Hora final en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	async getSummary(@Query() filter: DateRangeFilterDto) {
 		const summary = await this.statisticsCore.getSummary(filter);
@@ -68,13 +70,15 @@ export class StatisticsController {
 		name: 'startDate',
 		required: false,
 		type: String,
-		description: 'Fecha inicial ISO 8601',
+		description:
+			'Fecha/Hora inicial en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	@ApiQuery({
 		name: 'endDate',
 		required: false,
 		type: String,
-		description: 'Fecha final ISO 8601',
+		description:
+			'Fecha/Hora final en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	async getLiabilities(@Query() filter: DateRangeFilterDto) {
 		const liabilities = await this.statisticsCore.getLiabilities(filter);
@@ -88,13 +92,15 @@ export class StatisticsController {
 		name: 'startDate',
 		required: false,
 		type: String,
-		description: 'Fecha inicial ISO 8601',
+		description:
+			'Fecha/Hora inicial en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	@ApiQuery({
 		name: 'endDate',
 		required: false,
 		type: String,
-		description: 'Fecha final ISO 8601',
+		description:
+			'Fecha/Hora final en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	async getOperationalRisk(@Query() filter: DateRangeFilterDto) {
 		const risk = await this.statisticsCore.getOperationalRisk(filter);
@@ -108,13 +114,15 @@ export class StatisticsController {
 		name: 'startDate',
 		required: false,
 		type: String,
-		description: 'Fecha inicial ISO 8601',
+		description:
+			'Fecha/Hora inicial en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	@ApiQuery({
 		name: 'endDate',
 		required: false,
 		type: String,
-		description: 'Fecha final ISO 8601',
+		description:
+			'Fecha/Hora final en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	async getReviewersSla(@Query() filter: DateRangeFilterDto) {
 		const sla = await this.statisticsCore.getReviewersSla(filter);
@@ -128,13 +136,15 @@ export class StatisticsController {
 		name: 'startDate',
 		required: false,
 		type: String,
-		description: 'Fecha inicial ISO 8601',
+		description:
+			'Fecha/Hora inicial en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	@ApiQuery({
 		name: 'endDate',
 		required: false,
 		type: String,
-		description: 'Fecha final ISO 8601',
+		description:
+			'Fecha/Hora final en huso horario Argentina (ISO 8601, YYYY-MM-DD o YYYY-MM-DD HH:mm:ss)',
 	})
 	async getMissionsEngagement(@Query() filter: DateRangeFilterDto) {
 		const engagement = await this.statisticsCore.getMissionsEngagement(filter);

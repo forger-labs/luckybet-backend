@@ -35,7 +35,7 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 	}): Promise<UserMissionBasic> {
 		const um = this.userMissionModel.create({
 			playerId: data.playerId,
-      missionId: data.missionId,
+			missionId: data.missionId,
 			currentStep: 0,
 		});
 		const saved = await this.userMissionModel.save(um);
@@ -167,10 +167,10 @@ export class UserMissionRepoService implements ForDatabaseUserMissions {
 			if (resolved) {
 				missionWhere.type = resolved;
 			}
-    }
-    if (params?.umStatus === UserMissionStatus.IN_PROGRESS) {
-      missionWhere.status = MissionStatus.ACTIVE;
-    }
+		}
+		if (params?.umStatus === UserMissionStatus.IN_PROGRESS) {
+			missionWhere.status = MissionStatus.ACTIVE;
+		}
 
 		if (Object.keys(missionWhere).length > 0) {
 			where.mission = missionWhere;

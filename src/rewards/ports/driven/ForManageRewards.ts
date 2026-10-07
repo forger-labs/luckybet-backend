@@ -10,9 +10,12 @@ export interface ForManageRewards {
 		experiencePoints: number;
 	}): Promise<MissionRewardBasic>;
 
-  claimReward(userMissionId: number, playerId: number): Promise<MissionRewardBasic>;
+	claimReward(userMissionId: number, playerId: number): Promise<MissionRewardBasic>;
 
-  findClaimRewardByUMId(userMissionId: number, playerId: number): Promise<MissionRewardBasic>;
+	findClaimRewardByUMId(
+		userMissionId: number,
+		playerId: number,
+	): Promise<MissionRewardBasic>;
 
 	listPlayerRewards(
 		playerId: number,

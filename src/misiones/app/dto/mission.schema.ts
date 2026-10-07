@@ -1,6 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import * as z from 'zod';
 
+import { zDateHelper } from '@/src/shared/swagger/date.schema';
 import { BonusIntern } from '@/src/types/bonus';
 import {
 	apiResponseSchema,
@@ -8,7 +9,6 @@ import {
 } from '../../../shared/swagger/apiResponse.schema';
 import type { StepTargetConfig } from '../entities/mission-step.entity';
 import { MissionStatus, MissionType, StepType, UserMissionStatus } from '../enums';
-import { zDateHelper } from '@/src/shared/swagger/date.schema';
 
 export const validationMissionMessages = {
 	title: {
@@ -469,15 +469,15 @@ export class MissionFilterDto extends createZodDto(missionFilterSchema) {}
 export class UserMissionFilterDto extends createZodDto(userMissionFilterSchema) {}
 
 export const UserMissionSchema = z.object({
-  id: z.number().describe('ID'),
-  playerId: z.number(),
-  missionId: z.number(),
-  status: z.enum(UserMissionStatus),
-  currentStep: z.number(),
-  startedAt: zDateHelper,
-  completedAt: zDateHelper.optional(),
-  steps: z.array(stepSubmissionResponseSchema)
-})
+	id: z.number().describe('ID'),
+	playerId: z.number(),
+	missionId: z.number(),
+	status: z.enum(UserMissionStatus),
+	currentStep: z.number(),
+	startedAt: zDateHelper,
+	completedAt: zDateHelper.optional(),
+	steps: z.array(stepSubmissionResponseSchema),
+});
 
 export class UserMissionResponseDto extends createZodDto(
 	apiResponseSchema(UserMissionSchema),

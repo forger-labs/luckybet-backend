@@ -41,8 +41,7 @@ export const MISSIONS_SEED_DATA: SeedMissionData[] = [
 			{
 				stepOrder: 1,
 				type: StepType.GAME_PLAY,
-				content:
-					'Juega al menos 1 ronda en Pragmatic Play (apuesta mínima: 1 coin)',
+				content: 'Juega al menos 1 ronda en Pragmatic Play (apuesta mínima: 1 coin)',
 				targetConfig: {
 					provider: 'Pragmatic Play',
 					minBet: 1,
@@ -93,8 +92,7 @@ export const MISSIONS_SEED_DATA: SeedMissionData[] = [
 			{
 				stepOrder: 1,
 				type: StepType.GAME_PLAY,
-				content:
-					'Juega en cualquier mesa de Evolution con apuesta mínima de 2 coins',
+				content: 'Juega en cualquier mesa de Evolution con apuesta mínima de 2 coins',
 				targetConfig: {
 					provider: 'Evolution',
 					minBet: 2,
@@ -274,8 +272,7 @@ export const MISSIONS_SEED_DATA: SeedMissionData[] = [
 			{
 				stepOrder: 1,
 				type: StepType.GAME_PLAY,
-				content:
-					'Juega en Ruleta en Vivo con apuesta mínima de 3 coins',
+				content: 'Juega en Ruleta en Vivo con apuesta mínima de 3 coins',
 				targetConfig: {
 					gameId: 'live-roulette',
 					minBet: 3,
@@ -330,8 +327,7 @@ export const MISSIONS_SEED_DATA: SeedMissionData[] = [
 			{
 				stepOrder: 4,
 				type: StepType.TEXT,
-				content:
-					'Envía una reseña y recomendación de juego para la comunidad LuckyBet',
+				content: 'Envía una reseña y recomendación de juego para la comunidad LuckyBet',
 			},
 		],
 	},
@@ -371,8 +367,5 @@ export async function missionSeeder(queryRunner: QueryRunner): Promise<void> {
 
 export async function missionDown(queryRunner: QueryRunner): Promise<void> {
 	const titles = MISSIONS_SEED_DATA.map(m => m.title);
-	await queryRunner.query(
-		`DELETE FROM missions WHERE title = ANY($1)`,
-		[titles],
-	);
+	await queryRunner.query(`DELETE FROM missions WHERE title = ANY($1)`, [titles]);
 }

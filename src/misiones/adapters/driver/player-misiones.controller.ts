@@ -103,7 +103,7 @@ export class PlayerMisionesController {
 		const result = await this.misionesCore.verifyAutoStep(
 			userMissionId,
 			stepId,
-      player.id,
+			player.id,
 			player.username,
 			token ?? undefined,
 		);

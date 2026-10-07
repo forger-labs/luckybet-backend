@@ -137,7 +137,7 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			externalOperationId: options?.externalOperationId,
 			errorMessage: options?.errorMessage,
 			resolvedByAdminId: options?.resolvedByAdminId,
-			claimedAt: options?.claimedAt,
+			...(options?.claimedAt ? { claimedAt: options.claimedAt } : {})
 		});
 
 		const updated = await this.rewardModel.findOne({ where: { id } });
