@@ -28,7 +28,7 @@ export interface ForUserPanel {
 	/**
 	 * Authenticates a player with login and password against LuckyBet player API.
 	 */
-	login(login: string, password: string): Promise<LuckyBetLoginResponse>;
+	login(): Promise<string>;
 
 	/**
 	 * Initializes site session to obtain before_token for public operations.

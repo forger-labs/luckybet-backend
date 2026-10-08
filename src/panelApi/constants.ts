@@ -11,6 +11,7 @@ export const LUCKYBET_GAME_CATALOG_CACHE_KEY = 'luckybet:catalog:game_list';
 export const LUCKYBET_PROVIDERS_CACHE_KEY = 'luckybet:catalog:providers';
 export const LUCKYBET_BEFORE_TOKEN_CACHE_KEY = 'luckybet:auth:before_token';
 export const LUCKYBET_PLAYER_SESSION_KEY_PREFIX = 'luckybet:session:token:';
+export const LUCKYBET_CLIENT_TOKEN_CACHE_KEY = 'luckybet:session:token_client';
 
 export const DEFAULT_LUCKYBET_SESSION_TTL_SECONDS = 240; // 4 minutes
 export const DEFAULT_LUCKYBET_GAME_ACTIVITY_TTL_SECONDS = 150; // 2.5 minutes
