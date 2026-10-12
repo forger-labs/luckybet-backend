@@ -52,7 +52,7 @@ export const levelImageSchema = z
 		mimetype: z
 			.string()
 			.refine(
-				value => ['image/jpeg', 'image/png', 'image/webp'].includes(value),
+				value => ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(value),
 				validationLevelMessages.image.mimetype,
 			),
 	})
