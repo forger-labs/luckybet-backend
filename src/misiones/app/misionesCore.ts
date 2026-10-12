@@ -127,9 +127,7 @@ export class MisionesCore implements ForManageMissions, ForManagePlayerMissions 
 		if (!file.filename.trim()) {
 			throw new BadRequestException('El archivo debe tener un nombre');
 		}
-		if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
-			throw new BadRequestException('Solo se permiten imagenes JPEG o PNG');
-		}
+
 		if (file.buffer.length > 5 * 1024 * 1024) {
 			throw new BadRequestException('La imagen no puede superar los 5 MiB');
 		}
