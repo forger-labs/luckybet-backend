@@ -51,9 +51,9 @@ export const validationMissionMessages = {
 	image: {
 		buffer: 'El archivo debe ser un buffer valido',
 		filename: 'El archivo debe tener un nombre',
-		mimetype: 'Solo se permiten imagenes JPEG o PNG',
+		mimetype: 'Solo se permiten imagenes JPEG, JPG, WEBP o PNG',
 		size: 'La imagen no puede superar los 5 MiB',
-		describe: 'Imagen de portada de la mision (JPEG o PNG, maximo 5 MiB)',
+		describe: 'Imagen de portada de la mision (JPEG, JPG, WEBP o PNG, maximo 5 MiB)',
 	},
 	missionSteps: {
 		max: 'Maximo 50 pasos por mision',
@@ -84,7 +84,7 @@ export const validationMissionMessages = {
 		describe: 'URL de la imagen enviada por el jugador',
 	},
 	submissionImage: {
-		describe: 'Imagen enviada por el jugador (JPEG o PNG, maximo 5 MiB)',
+		describe: 'Imagen enviada por el jugador (JPEG, JPG, WEBP o PNG, maximo 5 MiB)',
 	},
 	reviewerNotes: {
 		describe: 'Notas del revisor sobre la submission',
@@ -195,7 +195,7 @@ export const missionImageSchema = z
 		mimetype: z
 			.string()
 			.refine(
-				value => ['image/jpeg', 'image/png', 'image/webp'].includes(value),
+				value => ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(value),
 				validationMissionMessages.image.mimetype,
 			),
 	})

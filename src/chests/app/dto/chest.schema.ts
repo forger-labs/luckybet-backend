@@ -36,7 +36,7 @@ export const validationChestMessages = {
 	image: {
 		buffer: 'El archivo debe ser un buffer valido',
 		filename: 'El archivo debe tener un nombre',
-		mimetype: 'Solo se permiten imagenes JPEG o PNG',
+		mimetype: 'Solo se permiten imagenes JPEG, JPG, WEBP o PNG',
 		size: 'La imagen no puede superar los 5 MiB',
 	},
 };
@@ -53,7 +53,7 @@ export const chestImageSchema = z
 		mimetype: z
 			.string()
 			.refine(
-				value => ['image/jpeg', 'image/png'].includes(value),
+				value => ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(value),
 				validationChestMessages.image.mimetype,
 			),
 	})
