@@ -1,0 +1,3 @@
+export const FOR_DATABASE_SITE_CONFIG = 'FOR_DATABASE_SITE_CONFIG';
+export const SITE_CONFIG_CORE_PROVIDER = 'SITE_CONFIG_CORE_PROVIDER';
+export const SITE_CONFIG_CACHE_KEY = 'site_config:global';

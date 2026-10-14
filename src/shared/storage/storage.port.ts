@@ -1,4 +1,4 @@
-export type StorageFolder = 'missions' | 'steps' | 'levels';
+export type StorageFolder = 'missions' | 'steps' | 'levels' | 'site-config';
 export type MissionImageFolder = StorageFolder;
 
 export type UploadableFile = {

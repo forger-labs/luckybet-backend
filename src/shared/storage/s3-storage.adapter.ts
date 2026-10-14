@@ -78,7 +78,7 @@ export class S3StorageAdapter implements StorageService {
 		folder: StorageFolder,
 		existingUrl: string,
 	): Promise<string> {
-		const newUrl = await this.uploadImage(file, folder);
+		const newKey = await this.uploadImage(file, folder);
 		if (existingUrl) {
 			try {
 				await this.deleteImage(existingUrl);
@@ -86,7 +86,7 @@ export class S3StorageAdapter implements StorageService {
 				this.logger.warn(`No se pudo eliminar la imagen anterior: ${existingUrl}`, error);
 			}
 		}
-		return newUrl;
+		return newKey;
 	}
 
 	async deleteImage(keyOrUrl: string): Promise<void> {

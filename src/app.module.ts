@@ -20,6 +20,7 @@ import { buildTypeOrmOptionsFromConfig } from './shared/database/databaseOptions
 import { RequestLoggerInterceptor } from './shared/interceptors/requestLogger.interceptor';
 import { LoggerModule } from './shared/logger/logger.module';
 import { StorageModule } from './shared/storage/storage.module';
+import { SiteConfigModule } from './siteConfig/siteConfig.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { UsersModule } from './users/users.module';
 
@@ -46,6 +47,7 @@ import { UsersModule } from './users/users.module';
 		PlayerChestsModule,
 		LevelRewardsModule,
 		StatisticsModule,
+		SiteConfigModule,
 	],
 	providers: [
 		{ provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
