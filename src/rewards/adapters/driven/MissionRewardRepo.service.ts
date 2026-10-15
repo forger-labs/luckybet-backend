@@ -118,8 +118,8 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			return null;
 		}
 
-		const updatedEntity = result.raw[0] as MissionReward;
-		return this.toBasic(updatedEntity);
+		const updatedEntity = result.raw[0] as RawMissionReward;
+		return this.toBasicFromRaw(updatedEntity);
 	}
 
 	async updateStatus(
@@ -161,5 +161,39 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 			createdAt: reward.created_at ? reward.created_at.toISOString() : undefined,
 			updatedAt: reward.updated_at ? reward.updated_at.toISOString() : undefined,
 		};
-	}
+  }
+
+  private toBasicFromRaw(reward: RawMissionReward): MissionRewardBasic {
+    return {
+      id: reward.id,
+      userMissionId: reward.user_mission_id,
+      playerId: reward.player_id,
+      coinsAmount: reward.coins_amount,
+      roomId: reward.room_id,
+      experiencePoints: reward.experience_points,
+      status: reward.status,
+      externalOperationId: reward.external_operation_id,
+      errorMessage: reward.error_message,
+      resolvedByAdminId: reward.resolved_by_admin_id,
+      claimedAt: reward.claimed_at ? new Date(reward.claimed_at).toISOString() : null,
+      createdAt: reward.created_at ? new Date(reward.created_at).toISOString() : undefined,
+      updatedAt: reward.updated_at ? new Date(reward.updated_at).toISOString() : undefined,
+    };
+  }
+}
+
+interface RawMissionReward {
+  id: number;
+  user_mission_id: number;
+  player_id: number;
+  coins_amount: number;
+  room_id: number;
+  experience_points: number;
+  status: RewardStatus;
+  external_operation_id: string | null;
+  error_message: string | null;
+  resolved_by_admin_id: number | null;
+  claimed_at: Date | null;
+  created_at: Date | null;
+  updated_at: Date | null;
 }
