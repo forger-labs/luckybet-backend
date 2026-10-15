@@ -36,7 +36,8 @@ export class AdminPanelService implements ForAdminPanel {
 	 * Retrieves the current senior/room login of a player via area=useredit.
 	 */
 	async getPlayerSenior(userId: string | number): Promise<string | null> {
-		const url = `${this.panelHost}/index.php?act=admin&area=useredit&id=${userId}&response=js`;
+		const url = `${this.panelHost}/index.php?act=admin&area=usersettings&module=base&id=${userId}&response=js
+   `;
 
 		try {
 			const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
@@ -48,8 +49,8 @@ export class AdminPanelService implements ForAdminPanel {
 				});
 			});
 
-			const fields = data.fields as Record<string, { value?: string }> | undefined;
-			const senior = fields?.create_login?.value;
+			const settings = data.settings as Record<string, { value?: string }> | undefined;
+			const senior = settings?.create_login?.value;
 			return senior ? String(senior).trim() : null;
 		} catch (error) {
 			const errorMsg: string = error instanceof Error ? error.message : 'Unknown error';
@@ -87,8 +88,10 @@ export class AdminPanelService implements ForAdminPanel {
 			);
 			return false;
 		}
-
-		return true;
+		const currentSenior = (
+			data.settings as Record<string, { value?: string }> | undefined
+		)?.create_login?.value;
+		return Boolean(data.successMessage || currentSenior === seniorName);
 	}
 	private readonly logger = new Logger(AdminPanelService.name);
 	private readonly panelHost: string;

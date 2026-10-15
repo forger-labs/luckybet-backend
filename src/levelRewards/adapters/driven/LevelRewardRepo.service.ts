@@ -48,7 +48,7 @@ export class LevelRewardRepoService implements ForDatabaseLevelRewards {
 		const found = await this.rewardModel.findOne({ where: { id } });
 		return found ? this.toBasic(found) : null;
 	}
- // TODO: Implement a proper locking mechanism to prevent race conditions when acquiring a claim lock. This is a simplified version that may not be safe in concurrent environments.
+	// TODO: Implement a proper locking mechanism to prevent race conditions when acquiring a claim lock. This is a simplified version that may not be safe in concurrent environments.
 	async acquireClaimLock(data: CreateLevelRewardInput): Promise<LevelRewardBasic | null> {
 		try {
 			const entity = this.rewardModel.create({

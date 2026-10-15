@@ -68,7 +68,7 @@ export class MissionRepoService implements ForDatabaseMissions {
 			where: { id },
 			relations: {
 				steps: true,
-				room: true
+				room: true,
 			},
 			order: { steps: { stepOrder: 'ASC' } },
 		});

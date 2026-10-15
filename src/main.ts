@@ -20,8 +20,8 @@ async function bootstrap() {
 	);
 	type FastifyPlugin = Parameters<typeof app.register>[0];
 
-  await app.register(cookie as unknown as FastifyPlugin);
-	await app.register(multipart  as unknown as FastifyPlugin, {
+	await app.register(cookie as unknown as FastifyPlugin);
+	await app.register(multipart as unknown as FastifyPlugin, {
 		limits: { fileSize: 5 * 1024 * 1024, files: 1 },
 		attachFieldsToBody: 'keyValues',
 		onFile: async part => {

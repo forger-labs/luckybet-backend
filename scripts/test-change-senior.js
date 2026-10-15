@@ -26,18 +26,29 @@ if (fs.existsSync('.env')) {
 	for (const line of envContent.split('\n')) {
 		const trimmed = line.trim();
 		if (trimmed.startsWith('LUCKYBET_ADMIN_LOGIN=')) {
-			adminLogin = trimmed.replace('LUCKYBET_ADMIN_LOGIN=', '').trim().replace(/^['"]|['"]$/g, '');
+			adminLogin = trimmed
+				.replace('LUCKYBET_ADMIN_LOGIN=', '')
+				.trim()
+				.replace(/^['"]|['"]$/g, '');
 		}
 		if (trimmed.startsWith('LUCKYBET_ADMIN_PASSWORD=')) {
-			adminPassword = trimmed.replace('LUCKYBET_ADMIN_PASSWORD=', '').trim().replace(/^['"]|['"]$/g, '');
+			adminPassword = trimmed
+				.replace('LUCKYBET_ADMIN_PASSWORD=', '')
+				.trim()
+				.replace(/^['"]|['"]$/g, '');
 		}
 		if (trimmed.startsWith('LUCKYBET_PANEL_HOST=')) {
-			panelHost = trimmed.replace('LUCKYBET_PANEL_HOST=', '').trim().replace(/^['"]|['"]$/g, '');
+			panelHost = trimmed
+				.replace('LUCKYBET_PANEL_HOST=', '')
+				.trim()
+				.replace(/^['"]|['"]$/g, '');
 		}
 	}
 }
 
-const normalizedHostUrl = panelHost.startsWith('http') ? panelHost : `https://${panelHost}`;
+const normalizedHostUrl = panelHost.startsWith('http')
+	? panelHost
+	: `https://${panelHost}`;
 const urlObj = new URL(normalizedHostUrl);
 const isHttps = urlObj.protocol === 'https:';
 const hostname = urlObj.hostname;
@@ -68,7 +79,8 @@ function request({ path, method = 'GET', headers = {}, body = null }) {
 			method,
 			headers: {
 				...headers,
-				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+				'User-Agent':
+					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
 			},
 		};
 
@@ -240,7 +252,9 @@ async function changePlayerSeniorCorrect(sessionId, userId, seniorName) {
 		body,
 	});
 
-	const isSuccess = Boolean(res.data?.successMessage || res.data?.settings?.create_login?.value === seniorName);
+	const isSuccess = Boolean(
+		res.data?.successMessage || res.data?.settings?.create_login?.value === seniorName,
+	);
 	return {
 		success: isSuccess && !res.data?.error,
 		error: res.data?.error,
@@ -257,24 +271,34 @@ async function main() {
 
 	const sessionId = await login();
 	const userId = await resolveLuckyBetUserId(sessionId, args.user);
-	console.log(`🎯 ID interno de LuckyBet resuelto: ${userId} (para login "${args.user}")`);
+	console.log(
+		`🎯 ID interno de LuckyBet resuelto: ${userId} (para login "${args.user}")`,
+	);
 
-	console.log('\n-----------------------------------------------------------------------');
+	console.log(
+		'\n-----------------------------------------------------------------------',
+	);
 	console.log('❌ PRUEBA 1: Intentando por el endpoint viejo (area=useredit)...');
 	console.log('-----------------------------------------------------------------------');
 	const oldAttempt = await changePlayerSeniorOld(sessionId, userId, args.targetRoom);
 	console.log(`Resultado viejo: error="${oldAttempt.error}"`);
 	console.log('👉 Esto demuestra por qué el código anterior fallaba con ese mensaje.');
 
-	console.log('\n-----------------------------------------------------------------------');
-	console.log('✅ PRUEBA 2: Cambiando por el endpoint real (area=usersettings&module=base)...');
+	console.log(
+		'\n-----------------------------------------------------------------------',
+	);
+	console.log(
+		'✅ PRUEBA 2: Cambiando por el endpoint real (area=usersettings&module=base)...',
+	);
 	console.log('-----------------------------------------------------------------------');
 	const initialSenior = await getPlayerSeniorCorrect(sessionId, userId);
 	console.log(`1. Sala actual antes de migrar: "${initialSenior}"`);
 
 	console.log(`2. Migrando a "${args.targetRoom}"...`);
 	const moveResult = await changePlayerSeniorCorrect(sessionId, userId, args.targetRoom);
-	console.log(`   Resultado: ${moveResult.success ? 'ÉXITO' : 'FALLO'}, Sala en respuesta: "${moveResult.currentSenior}"`);
+	console.log(
+		`   Resultado: ${moveResult.success ? 'ÉXITO' : 'FALLO'}, Sala en respuesta: "${moveResult.currentSenior}"`,
+	);
 
 	const verifiedAfterMove = await getPlayerSeniorCorrect(sessionId, userId);
 	console.log(`3. Verificación GET: Sala actual es ahora "${verifiedAfterMove}"`);
@@ -282,7 +306,9 @@ async function main() {
 	const restoreTarget = args.restoreRoom || initialSenior || 'Superala';
 	console.log(`4. Regresando a la sala original "${restoreTarget}"...`);
 	const restoreResult = await changePlayerSeniorCorrect(sessionId, userId, restoreTarget);
-	console.log(`   Resultado retorno: ${restoreResult.success ? 'ÉXITO' : 'FALLO'}, Sala en respuesta: "${restoreResult.currentSenior}"`);
+	console.log(
+		`   Resultado retorno: ${restoreResult.success ? 'ÉXITO' : 'FALLO'}, Sala en respuesta: "${restoreResult.currentSenior}"`,
+	);
 
 	const finalSenior = await getPlayerSeniorCorrect(sessionId, userId);
 	console.log(`5. Verificación final GET: Sala restablecida a "${finalSenior}"`);

@@ -163,7 +163,7 @@ export class ChestsCore implements ForManageChests {
 			limit: params.take ?? 50,
 			skip: params.skip ?? 0,
 		};
-  }
+	}
 	// TODO: DELETE WRONG VALIDATION
 	private validateImageFile(file: UploadableFile): void {
 		if (!file.filename.trim()) {

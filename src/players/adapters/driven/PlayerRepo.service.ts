@@ -178,8 +178,8 @@ export class PlayerRepoService implements ForDatabasePlayers {
 					name: true,
 					minExperience: true,
 					id: true,
-        },
-        room: true
+				},
+				room: true,
 			},
 			relations: {
 				level: true,

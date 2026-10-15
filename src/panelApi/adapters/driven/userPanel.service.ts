@@ -48,9 +48,9 @@ export class UserPanelService implements ForUserPanel {
 			'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
 		Origin: 'https://luckybet.site',
 		Referer: 'https://luckybet.site/',
-  };
-  private readonly usernameApi: string;
-  private readonly passwordApi: string;
+	};
+	private readonly usernameApi: string;
+	private readonly passwordApi: string;
 
 	constructor(
 		config: ConfigService,
@@ -91,8 +91,8 @@ export class UserPanelService implements ForUserPanel {
 				'LUCKYBET_BEFORE_TOKEN_TTL_SECONDS',
 				DEFAULT_LUCKYBET_BEFORE_TOKEN_TTL_SECONDS,
 			),
-    );
-    this.usernameApi = config.get<string>('LUCKYBET_API_USERNAME') ?? '';
+		);
+		this.usernameApi = config.get<string>('LUCKYBET_API_USERNAME') ?? '';
 		this.passwordApi = config.get<string>('LUCKYBET_API_PASSWORD') ?? '';
 	}
 
@@ -184,18 +184,21 @@ export class UserPanelService implements ForUserPanel {
 	 * Authenticates a player using login and password.
 	 */
 	async login(): Promise<string> {
-	const cached = await this.cache.get<string>(LUCKYBET_CLIENT_TOKEN_CACHE_KEY);
-	if (cached && Array.isArray(cached)) {
-		return cached;
-	}
+		const cached = await this.cache.get<string>(LUCKYBET_CLIENT_TOKEN_CACHE_KEY);
+		if (cached && Array.isArray(cached)) {
+			return cached;
+		}
 
-		const response =  await this.executeCommand<LuckyBetLoginResponseContent>('authorization', {
-			type: 'login',
-			data: {
-				login: this.usernameApi,
-				password: this.passwordApi,
+		const response = await this.executeCommand<LuckyBetLoginResponseContent>(
+			'authorization',
+			{
+				type: 'login',
+				data: {
+					login: this.usernameApi,
+					password: this.passwordApi,
+				},
 			},
-		});
+		);
 
 		if (response.status === 'success' && response.token) {
 			await this.cache.set(
@@ -204,11 +207,11 @@ export class UserPanelService implements ForUserPanel {
 				this.beforeTokenTtl,
 			);
 			return response.token;
-    }
-   	this.logger.error(
+		}
+		this.logger.error(
 			`Error al ejecutar login en LuckyBet: ${response.error || response.errorCode || 'Token ausente'}`,
 		);
-		return ''
+		return '';
 	}
 
 	private extractSessionId(cookies: string[]): string {
@@ -233,33 +236,38 @@ export class UserPanelService implements ForUserPanel {
 		}
 
 		let cookies: string[] = [];
-    let activeToken = token?.trim() || '';
-    let siteInitialize = false;
-    if (!activeToken) {
-      try {
-        const response = await this.login()
-        if (!response.trim()) {
-          cookies = await this.siteInitialize();
-          siteInitialize = true;
-        }
-        activeToken = response ?? this.extractSessionId(cookies);
-      } catch (err) {
-        this.logger.error(`Error al obtener token en GameList ${err}`);
-      }
-    }
+		let activeToken = token?.trim() || '';
+		let siteInitialize = false;
+		if (!activeToken) {
+			try {
+				const response = await this.login();
+				if (!response.trim()) {
+					cookies = await this.siteInitialize();
+					siteInitialize = true;
+				}
+				activeToken = response ?? this.extractSessionId(cookies);
+			} catch (err) {
+				this.logger.error(`Error al obtener token en GameList ${err}`);
+			}
+		}
 
-    let response: LuckyBetResponse<LuckyBetGameItem[] | { games?: { [x: string]: LuckyBetGameItem }; list?: LuckyBetGameItem[] }>;
-
-    try {
-		response = await this.executeCommand<
+		let response: LuckyBetResponse<
 			| LuckyBetGameItem[]
 			| { games?: { [x: string]: LuckyBetGameItem }; list?: LuckyBetGameItem[] }
-		>('getGameList', siteInitialize ? { 'before-token': activeToken } : { 'token' : activeToken });
-    } catch (err) {
-      this.logger.error(`Error al ejecutar getGameList en LuckyBet: ${err}`);
-      return [];
-    }
+		>;
 
+		try {
+			response = await this.executeCommand<
+				| LuckyBetGameItem[]
+				| { games?: { [x: string]: LuckyBetGameItem }; list?: LuckyBetGameItem[] }
+			>(
+				'getGameList',
+				siteInitialize ? { 'before-token': activeToken } : { token: activeToken },
+			);
+		} catch (err) {
+			this.logger.error(`Error al ejecutar getGameList en LuckyBet: ${err}`);
+			return [];
+		}
 
 		let games: LuckyBetGameItem[] = [];
 
