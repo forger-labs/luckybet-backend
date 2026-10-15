@@ -147,7 +147,7 @@ describe('RewardsCore', () => {
 			expect(result.status).toBe(RewardStatus.CLAIMED);
 		});
 
-		it('debería marcar TIMEOUT_UNCERTAIN si falla la transferencia previa a la sala promocional (abortando crédito)', async () => {
+		it('debería marcar TIMEOUT_UNCERTAIN y lanzar BadRequestException si falla la transferencia previa a la sala promocional (abortando crédito)', async () => {
 			mockRewardRepo.findByUserMissionId.mockResolvedValue(mockReward);
 			mockRewardRepo.acquireProcessingLock.mockResolvedValue({
 				...mockReward,
@@ -159,7 +159,7 @@ describe('RewardsCore', () => {
 				status: RewardStatus.TIMEOUT_UNCERTAIN,
 			});
 
-			const result = await rewardsCore.claimReward(10, 5);
+			await expect(rewardsCore.claimReward(10, 5)).rejects.toThrow(BadRequestException);
 
 			expect(mockPanelApi.creditPlayer).not.toHaveBeenCalled();
 			expect(mockRewardRepo.updateStatus).toHaveBeenCalledWith(
@@ -171,10 +171,9 @@ describe('RewardsCore', () => {
 					),
 				},
 			);
-			expect(result.status).toBe(RewardStatus.TIMEOUT_UNCERTAIN);
 		});
 
-		it('debería marcar TIMEOUT_UNCERTAIN si el crédito tiene éxito pero falla el retorno a la sala base', async () => {
+		it('debería marcar TIMEOUT_UNCERTAIN y lanzar BadRequestException si el crédito tiene éxito pero falla el retorno a la sala base', async () => {
 			mockRewardRepo.findByUserMissionId.mockResolvedValue(mockReward);
 			mockRewardRepo.acquireProcessingLock.mockResolvedValue({
 				...mockReward,
@@ -194,7 +193,7 @@ describe('RewardsCore', () => {
 				status: RewardStatus.TIMEOUT_UNCERTAIN,
 			});
 
-			const result = await rewardsCore.claimReward(10, 5);
+			await expect(rewardsCore.claimReward(10, 5)).rejects.toThrow(BadRequestException);
 
 			expect(mockRewardRepo.updateStatus).toHaveBeenCalledWith(
 				1,
@@ -205,7 +204,6 @@ describe('RewardsCore', () => {
 					claimedAt: expect.any(Date),
 				},
 			);
-			expect(result.status).toBe(RewardStatus.TIMEOUT_UNCERTAIN);
 		});
 	});
 

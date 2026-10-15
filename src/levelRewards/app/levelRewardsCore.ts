@@ -148,25 +148,36 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 				error,
 			);
 
+			let returnFailed = false;
 			if (transferredToTarget && baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(err =>
-						this.logger.error(
-							`Error al regresar al jugador a su sala base [${baseRoom.name}] tras nivel:`,
-							err,
-						),
+				try {
+					const returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
 					);
+					if (!returned) returnFailed = true;
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar al jugador a su sala base [${baseRoom.name}] tras nivel:`,
+						err,
+					);
+					returnFailed = true;
+				}
 			}
+
+			const networkErrorMsg =
+				error instanceof Error
+					? error.message
+					: 'Error desconocido de conexión al acreditar premio de nivel';
+			const detailMsg = returnFailed
+				? `Timeout al acreditar premio de nivel (${networkErrorMsg}), y falló el retorno a la sala base [${baseRoom?.name}]`
+				: networkErrorMsg;
 
 			return await this.rewardRepo.updateStatus(
 				locked.id,
 				RewardStatus.TIMEOUT_UNCERTAIN,
 				{
-					errorMessage:
-						error instanceof Error
-							? error.message
-							: 'Error desconocido de conexión al acreditar premio de nivel',
+					errorMessage: detailMsg,
 				},
 			);
 		}
@@ -176,9 +187,32 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 				`Error en LuckyBet acreditando premio de nivel: ${mutationResult.errorMessage}`,
 			);
 			if (transferredToTarget && baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(() => undefined);
+				let returned = false;
+				try {
+					returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
+					);
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar al jugador a su sala base [${baseRoom.name}]:`,
+						err,
+					);
+					returned = false;
+				}
+
+				if (!returned) {
+					this.logger.error(
+						`Fallo el retorno a la sala base [${baseRoom.name}] tras fallo de acreditación para level reward ${locked.id}`,
+					);
+					return await this.rewardRepo.updateStatus(
+						locked.id,
+						RewardStatus.TIMEOUT_UNCERTAIN,
+						{
+							errorMessage: `Error al acreditar saldo de nivel (${mutationResult.errorMessage}), y falló el retorno a la sala base [${baseRoom.name}]`,
+						},
+					);
+				}
 			}
 			return await this.rewardRepo.updateStatus(locked.id, RewardStatus.PENDING, {
 				errorMessage: mutationResult.errorMessage ?? 'Error al acreditar saldo de nivel',

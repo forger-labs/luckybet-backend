@@ -22,7 +22,6 @@ import {
 } from '../../constants';
 import type { ForUserPanel } from '../../ports/forUserPanel.port';
 import type {
-	LuckyBetLoginResponse,
 	LuckyBetLoginResponseContent,
 	LuckyBetSiteInitializeContent,
 	PlayerLastPlayedGameResult,

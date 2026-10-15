@@ -276,9 +276,15 @@ describe('PlayerChestsCore', () => {
 			status: RewardStatus.TIMEOUT_UNCERTAIN,
 		});
 
-		const result = await core.claimChest(1, 10);
+		await expect(core.claimChest(1, 10)).rejects.toThrow(BadRequestException);
 
 		expect(mockPanelApi.creditPlayer).not.toHaveBeenCalled();
-		expect(result.status).toBe(RewardStatus.TIMEOUT_UNCERTAIN);
+		expect(mockClaimRepo.updateStatus).toHaveBeenCalledWith(
+			101,
+			RewardStatus.TIMEOUT_UNCERTAIN,
+			expect.objectContaining({
+				errorMessage: expect.stringContaining('Fallo al transferir a la sala promocional'),
+			}),
+		);
 	});
 });

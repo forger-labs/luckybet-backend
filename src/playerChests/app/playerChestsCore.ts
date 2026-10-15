@@ -324,27 +324,30 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		if (chest.roomId && this.roomRepo) {
 			const targetRoom = await this.roomRepo.findById(chest.roomId);
 			if (targetRoom?.isActive) {
-				const success = await this.panelApi
-					.changePlayerSenior(playerIdentifier, targetRoom.name)
-					.catch(err => {
-						this.logger.error(
-							`Error al transferir jugador a sala de cofre [${targetRoom.name}]:`,
-							err,
-						);
-						return false;
-					});
-
-				// Si falla la transferencia a la sala del cofre, abortar crédito y marcar TIMEOUT_UNCERTAIN
-				if (!success) {
-					return await this.claimRepo.updateStatus(
-						locked.id,
-						RewardStatus.TIMEOUT_UNCERTAIN,
-						{
-							errorMessage: `Fallo al transferir a la sala promocional del cofre [${targetRoom.name}] antes de acreditar`,
-						},
+				try {
+					const success = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						targetRoom.name,
 					);
+
+					if (!success) {
+						this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
+						await this.claimRepo.updateStatus(locked.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+							errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
+						});
+						throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
+					}
+					transferredToTarget = true;
+				} catch (err) {
+					this.logger.error(
+						`Error al transferir jugador a sala [${targetRoom.name}]:`,
+						err,
+					);
+					await this.claimRepo.updateStatus(locked.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+						errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
+					});
+					throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 				}
-				transferredToTarget = true;
 			}
 		}
 
@@ -364,27 +367,40 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 				`Timeout/Fallo de red en LuckyBet para cofre claim ${locked.id}:`,
 				error,
 			);
+
+			let returnFailed = false;
 			if (transferredToTarget && baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(err =>
-						this.logger.error(
-							`Error al regresar al jugador a su sala base [${baseRoom.name}] tras nivel:`,
-							err,
-						),
+				try {
+					const returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
 					);
+					if (!returned) returnFailed = true;
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar al jugador a su sala base [${baseRoom.name}] tras cofre:`,
+						err,
+					);
+					returnFailed = true;
+				}
 			}
 
-			return await this.claimRepo.updateStatus(
+			const networkErrorMsg =
+				error instanceof Error
+					? error.message
+					: 'Error desconocido de conexion al acreditar cofre';
+			const detailMsg = returnFailed
+				? `Timeout al acreditar cofre (${networkErrorMsg}), y falló el retorno a la sala base [${baseRoom?.name}]`
+				: networkErrorMsg;
+
+			await this.claimRepo.updateStatus(
 				locked.id,
 				RewardStatus.TIMEOUT_UNCERTAIN,
 				{
-					errorMessage:
-						error instanceof Error
-							? error.message
-							: 'Error desconocido de conexion al acreditar cofre',
+					errorMessage: detailMsg,
 				},
 			);
+			throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 		}
 
 		if (!mutationResult.success) {
@@ -392,13 +408,38 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 				`Error en LuckyBet acreditando cofre: ${mutationResult.errorMessage}`,
 			);
 			if (transferredToTarget && baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(() => undefined);
+				let returned = false;
+				try {
+					returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
+					);
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar al jugador a su sala base [${baseRoom.name}]:`,
+						err,
+					);
+					returned = false;
+				}
+
+				if (!returned) {
+					this.logger.error(
+						`Fallo el retorno a la sala base [${baseRoom.name}] tras fallo de acreditación para cofre ${locked.id}`,
+					);
+					await this.claimRepo.updateStatus(
+						locked.id,
+						RewardStatus.TIMEOUT_UNCERTAIN,
+						{
+							errorMessage: `Error al acreditar saldo de cofre (${mutationResult.errorMessage}), y falló el retorno a la sala base [${baseRoom.name}]`,
+						},
+					);
+					throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
+				}
 			}
-			return await this.claimRepo.updateStatus(locked.id, RewardStatus.PENDING, {
+			await this.claimRepo.updateStatus(locked.id, RewardStatus.PENDING, {
 				errorMessage: mutationResult.errorMessage ?? 'Error al acreditar saldo de cofre',
 			});
+			throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 		}
 
 		// 6. Retorno obligatorio a la sala base del jugador
@@ -414,7 +455,7 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 				});
 
 			if (!returned) {
-				return await this.claimRepo.updateStatus(
+				await this.claimRepo.updateStatus(
 					locked.id,
 					RewardStatus.TIMEOUT_UNCERTAIN,
 					{
@@ -423,6 +464,7 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 						claimedAt: new Date(),
 					},
 				);
+				throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 			}
 		}
 
@@ -495,10 +537,35 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 		// FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
 		if (claim.roomId && claim.room) {
 			const targetRoom = claim.room;
-			if (targetRoom?.isActive) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, targetRoom.name)
-					.catch(() => undefined);
+      if (targetRoom?.isActive) {
+        try {
+          const success = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						targetRoom.name,
+					);
+
+					if (!success) {
+						this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
+						await this.claimRepo.updateStatus(
+							claim.id,
+							RewardStatus.TIMEOUT_UNCERTAIN,
+							{
+								errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
+							},
+						);
+						throw new BadRequestException(
+							`Fallo al acreditar fichas. Contacta con soporte`,
+						);
+					}
+        } catch (err) {
+          this.logger.error(err, `Error al transferir jugador a sala [${targetRoom.name}] para reintento:`);
+          await this.claimRepo.updateStatus(claim.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+            errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar para reintento. Error: ${err}`,
+          });
+          throw new BadRequestException(
+						`Fallo al acreditar fichas. Contacta con soporte`,
+					);
+        }
 			}
 		}
 
@@ -510,9 +577,32 @@ export class PlayerChestsCore implements ForManagePlayerChests {
 			if (mutation.success) {
 				// Retornar al jugador a su sala base
 				if (baseRoom) {
-					await this.panelApi
-						.changePlayerSenior(playerIdentifier, baseRoom.name)
-						.catch(() => undefined);
+					let returned = false;
+					try {
+						returned = await this.panelApi.changePlayerSenior(
+							playerIdentifier,
+							baseRoom.name,
+						);
+					} catch (err) {
+						this.logger.error(
+							`Error al regresar al jugador a sala base [${baseRoom.name}] en FORCE_RETRY de cofre:`,
+							err,
+						);
+						returned = false;
+					}
+
+					if (!returned) {
+						return await this.claimRepo.updateStatus(
+							claim.id,
+							RewardStatus.TIMEOUT_UNCERTAIN,
+							{
+								externalOperationId: mutation.operationId ?? null,
+								errorMessage: `Fichas de cofre acreditadas en reintento (Op: ${mutation.operationId}) pero falló el retorno a la sala base [${baseRoom.name}]`,
+								resolvedByAdminId: adminId,
+								claimedAt: new Date(),
+							},
+						);
+					}
 				}
 
 				return await this.claimRepo.updateStatus(claim.id, RewardStatus.CLAIMED, {

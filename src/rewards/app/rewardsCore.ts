@@ -123,13 +123,14 @@ export class RewardsCore implements ForManageRewards {
 
 					if (!success) {
 						this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
-						return await this.rewardRepo.updateStatus(
+						await this.rewardRepo.updateStatus(
 							locked.id,
 							RewardStatus.TIMEOUT_UNCERTAIN,
 							{
 								errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
 							},
 						);
+						throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 					}
 					transferredToTarget = true;
 				} catch (err) {
@@ -137,13 +138,10 @@ export class RewardsCore implements ForManageRewards {
 						`Error al transferir jugador a sala [${targetRoom.name}]:`,
 						err,
 					);
-					return await this.rewardRepo.updateStatus(
-						locked.id,
-						RewardStatus.TIMEOUT_UNCERTAIN,
-						{
-							errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
-						},
-					);
+					await this.rewardRepo.updateStatus(locked.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+						errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
+					});
+					throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 				}
 			}
 		}
@@ -165,30 +163,78 @@ export class RewardsCore implements ForManageRewards {
 				`Timeout/Error al acreditar saldo en LuckyBet para reward ${locked.id}:`,
 				error,
 			);
-			return await this.rewardRepo.updateStatus(
-				locked.id,
-				RewardStatus.TIMEOUT_UNCERTAIN,
-				{
-					errorMessage:
-						error instanceof Error
-							? error.message
-							: 'Error desconocido de conexion al acreditar',
-				},
-			);
+
+			let returnFailed = false;
+			if (transferredToTarget && baseRoom) {
+				try {
+					const returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
+					);
+					if (!returned) returnFailed = true;
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar jugador a sala base [${baseRoom.name}] tras timeout de crédito:`,
+						err,
+					);
+					returnFailed = true;
+				}
+			}
+
+			const networkErrorMsg =
+				error instanceof Error
+					? error.message
+					: 'Error desconocido de conexion al acreditar';
+			const detailMsg = returnFailed
+				? `Timeout al acreditar (${networkErrorMsg}), y falló el retorno a la sala base [${baseRoom?.name}]`
+				: networkErrorMsg;
+
+			await this.rewardRepo.updateStatus(locked.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+				errorMessage: detailMsg,
+			});
+			throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 		}
+
 		if (!mutationResult.success) {
 			this.logger.error(
 				`Error reportado por LuckyBet al acreditar fichas: ${mutationResult.errorMessage}`,
 			);
+
 			// Regresar al jugador a su sala si fue movido
 			if (transferredToTarget && baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(() => undefined);
+				let returned = false;
+				try {
+					returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
+					);
+				} catch (err) {
+					this.logger.error(
+						`Error al regresar al jugador a su sala base [${baseRoom.name}]:`,
+						err,
+					);
+					returned = false;
+				}
+
+				if (!returned) {
+					this.logger.error(
+						`Fallo el retorno a la sala base [${baseRoom.name}] tras fallo de acreditación para reward ${locked.id}`,
+					);
+					await this.rewardRepo.updateStatus(
+						locked.id,
+						RewardStatus.TIMEOUT_UNCERTAIN,
+						{
+							errorMessage: `Error al acreditar saldo (${mutationResult.errorMessage}), y falló el retorno a la sala base [${baseRoom.name}]`,
+						},
+					);
+					throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
+				}
 			}
-			return await this.rewardRepo.updateStatus(locked.id, RewardStatus.PENDING, {
+
+			await this.rewardRepo.updateStatus(locked.id, RewardStatus.PENDING, {
 				errorMessage: mutationResult.errorMessage ?? 'Error al acreditar saldo',
 			});
+			throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 		}
 
 		// 3. Retorno obligatorio a la sala base del jugador si fue transferido
@@ -205,7 +251,7 @@ export class RewardsCore implements ForManageRewards {
 
 			// Si el saldo ya entró pero falló el retorno a la sala base, marcar TIMEOUT_UNCERTAIN para auditoría
 			if (!returned) {
-				return await this.rewardRepo.updateStatus(
+				await this.rewardRepo.updateStatus(
 					locked.id,
 					RewardStatus.TIMEOUT_UNCERTAIN,
 					{
@@ -214,6 +260,7 @@ export class RewardsCore implements ForManageRewards {
 						claimedAt: new Date(),
 					},
 				);
+				throw new BadRequestException('Fallo al acreditar fichas. Contacta con soporte');
 			}
 		}
 
@@ -282,52 +329,67 @@ export class RewardsCore implements ForManageRewards {
 		if (action === 'RESOLVE_CLAIMED') {
 			// Si el saldo ya entró y solo faltaba devolver al jugador a su sala
 			if (baseRoom) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, baseRoom.name)
-					.catch(() => undefined);
+				let returned = false;
+        try {
+					returned = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						baseRoom.name,
+					);
+				} catch (err) {
+					this.logger.error(`Error al regresar a sala base en RESOLVE_CLAIMED:`, err);
+					returned = false;
+				}
+
+				if (!returned) {
+					throw new BadRequestException(
+						`No se pudo retornar al jugador a su sala base [${baseRoom.name}]. Resuelve la sala en LuckyBet antes de cerrar el reclamo.`,
+					);
+				}
 			}
 
 			return this.rewardRepo.updateStatus(reward.id, RewardStatus.CLAIMED, {
 				externalOperationId: options?.externalOperationId ?? reward.externalOperationId,
 				errorMessage: options?.adminNotes ? `Resuelto: ${options.adminNotes}` : undefined,
 				resolvedByAdminId: adminId,
+				claimedAt: new Date(),
 			});
 		}
 
 		// FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
 		if (reward.roomId && this.roomRepo) {
 			const targetRoom = await this.roomRepo.findById(reward.roomId);
-      if (targetRoom?.isActive) {
-        try {
-          const success = await this.panelApi.changePlayerSenior(
+			if (targetRoom?.isActive) {
+				try {
+					const success = await this.panelApi.changePlayerSenior(
 						playerIdentifier,
 						targetRoom.name,
 					);
 
 					if (!success) {
 						this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
-						return await this.rewardRepo.updateStatus(
+						await this.rewardRepo.updateStatus(
 							reward.id,
 							RewardStatus.TIMEOUT_UNCERTAIN,
 							{
 								errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
 							},
 						);
+						throw new BadRequestException(
+							`Fallo al transferir de sala para acreditar fichas. Contacta con soporte`,
+						);
 					}
-        } catch (err) {
-          this.logger.error(
+				} catch (err) {
+					this.logger.error(
 						`Error al transferir jugador a sala [${targetRoom.name}]:`,
 						err,
 					);
-					return await this.rewardRepo.updateStatus(
-						reward.id,
-						RewardStatus.TIMEOUT_UNCERTAIN,
-						{
-							errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
-						},
+					await this.rewardRepo.updateStatus(reward.id, RewardStatus.TIMEOUT_UNCERTAIN, {
+						errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
+					});
+					throw new BadRequestException(
+						`Fallo al transferir de sala para acreditar fichas. Contacta con soporte`,
 					);
-        }
-
+				}
 			}
 		}
 
@@ -339,9 +401,32 @@ export class RewardsCore implements ForManageRewards {
 			if (mutation.success) {
 				// Retornar al jugador a su sala base
 				if (baseRoom) {
-					await this.panelApi
-						.changePlayerSenior(playerIdentifier, baseRoom.name)
-						.catch(() => undefined);
+					let returned = false;
+					try {
+						returned = await this.panelApi.changePlayerSenior(
+							playerIdentifier,
+							baseRoom.name,
+						);
+					} catch (err) {
+						this.logger.error(`Error al retornar a sala base en FORCE_RETRY:`, err);
+						returned = false;
+					}
+
+					if (!returned) {
+						await this.rewardRepo.updateStatus(
+							reward.id,
+							RewardStatus.TIMEOUT_UNCERTAIN,
+							{
+								externalOperationId: mutation.operationId ?? null,
+								errorMessage: `Fichas acreditadas en reintento (Op: ${mutation.operationId}) pero falló el retorno a la sala base [${baseRoom.name}]`,
+								resolvedByAdminId: adminId,
+								claimedAt: new Date(),
+							},
+            );
+						throw new BadRequestException(
+              `Fichas acreditadas pero fallo el retorno a la sala base [${baseRoom.name}]. Resuelve la sala en LuckyBet antes de cerrar el reclamo.`,
+            );
+					}
 				}
 
 				return await this.rewardRepo.updateStatus(reward.id, RewardStatus.CLAIMED, {
