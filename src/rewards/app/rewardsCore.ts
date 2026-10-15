@@ -112,6 +112,7 @@ export class RewardsCore implements ForManageRewards {
 		let transferredToTarget = false;
 
 		// 1. Si la recompensa tiene una sala especial asignada, transferir al jugador
+		this.logger.log(locked)
 		if (locked.roomId && this.roomRepo) {
 			const targetRoom = await this.roomRepo.findById(locked.roomId);
 			if (targetRoom?.isActive) {
