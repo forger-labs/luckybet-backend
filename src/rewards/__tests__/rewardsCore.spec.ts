@@ -75,11 +75,11 @@ describe('RewardsCore', () => {
 				isActive: true,
 				roomId: 1,
 				room: mockBaseRoom,
-			}),
+      }), addExperience: jest.fn(),
+			updateLevel: jest.fn(),
 			createPlayer: jest.fn(),
 			updatePlayerById: jest.fn(),
 			getPlayers: jest.fn(),
-			addExperienceAndRecalculateLevel: jest.fn(),
 		};
 
 		mockRoomRepo = {
@@ -88,7 +88,6 @@ describe('RewardsCore', () => {
 			createRoom: jest.fn(),
 			updateRoom: jest.fn(),
 			getRooms: jest.fn(),
-			findActiveRooms: jest.fn(),
 		};
 
 		rewardsCore = new RewardsCore(

@@ -83,7 +83,10 @@ export const rewardFilterSchema = z.object({
 export type MissionRewardBasic = {
 	id: number;
 	userMissionId: number;
-	playerId: number;
+  playerId: number;
+  player?: {
+    username: string;
+	}
 	coinsAmount: number;
 	roomId?: number | null;
 	experiencePoints: number;

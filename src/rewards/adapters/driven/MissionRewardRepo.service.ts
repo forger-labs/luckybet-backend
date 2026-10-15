@@ -149,7 +149,10 @@ export class MissionRewardRepoService implements ForDatabaseMissionRewards {
 		return {
 			id: reward.id,
 			userMissionId: reward.userMissionId,
-			playerId: reward.playerId,
+      playerId: reward.playerId,
+      player: {
+        username: reward.userMission?.player?.username || '',
+      },
 			coinsAmount: reward.coinsAmount,
 			roomId: reward.roomId,
 			experiencePoints: reward.experiencePoints,

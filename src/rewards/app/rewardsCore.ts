@@ -113,32 +113,39 @@ export class RewardsCore implements ForManageRewards {
 
 		// 1. Si la recompensa tiene una sala especial asignada, transferir al jugador
 		this.logger.log(locked)
-		if (locked.roomId && this.roomRepo) {
-			const targetRoom = await this.roomRepo.findById(locked.roomId);
-			if (targetRoom?.isActive) {
-				const success = await this.panelApi
-					.changePlayerSenior(playerIdentifier, targetRoom.name)
-					.catch(err => {
-						this.logger.error(
-							`Error al transferir jugador a sala [${targetRoom.name}]:`,
-							err,
-						);
-						return false;
-					});
+    if (locked.roomId) {
+      const targetRoom = await this.roomRepo.findById(locked.roomId);
+      this.logger.log(targetRoom)
+      if (targetRoom?.isActive) {
+        try {
+          const success = await this.panelApi
+            .changePlayerSenior(playerIdentifier, targetRoom.name);
+          transferredToTarget = true;
 
-				// Si la transferencia a la sala promocional falla, abortar crédito y marcar TIMEOUT_UNCERTAIN
-				if (!success) {
-					return await this.rewardRepo.updateStatus(
-						locked.id,
-						RewardStatus.TIMEOUT_UNCERTAIN,
-						{
-							errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar`,
-						},
-					);
-				}
-				transferredToTarget = true;
-			}
-		}
+          if (!success) {
+            this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
+            return await this.rewardRepo.updateStatus(
+              locked.id,
+              RewardStatus.TIMEOUT_UNCERTAIN,
+              {
+                errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
+              },
+            );
+          }
+        } catch (err) {
+          this.logger.error(`Error al transferir jugador a sala [${targetRoom.name}]:`, err
+          );
+          return await this.rewardRepo.updateStatus(
+            locked.id,
+            RewardStatus.TIMEOUT_UNCERTAIN,
+            {
+              errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
+            },
+          );
+        }
+      }
+    }
+
 
 		// 2. Ejecutar acreditación de saldo en LuckyBet
 		let mutationResult: {

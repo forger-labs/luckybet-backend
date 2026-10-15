@@ -66,12 +66,10 @@ export class AdminPanelService implements ForAdminPanel {
 		userId: string | number,
 		seniorName: string,
 	): Promise<boolean> {
-		const url = `${this.panelHost}/index.php?act=admin&area=useredit&id=${userId}&response=js`;
+		const url = `${this.panelHost}/index.php?act=admin&area=usersettings&module=base&id=${userId}&response=js`;
 		const params = new URLSearchParams();
-		params.append('send', 'true');
 		params.append('create_login', seniorName);
-		params.append('note', '');
-		params.append('name', '');
+		params.append('setting[value]', seniorName);
 
 		const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
 			return this.client.post<Record<string, unknown>>(url, params.toString(), {

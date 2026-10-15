@@ -90,7 +90,7 @@ export class LevelRewardsCore implements ForManageLevelRewards {
 		}
 
 		if (!locked) {
-			throw new ConflictException('El premio ya está siendo procesado o fue reclamado');
+			throw new ConflictException('El reclamo de premio no existe');
 		}
 
 		const coinsAmount = locked.coinsAmount;
