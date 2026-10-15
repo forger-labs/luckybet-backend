@@ -112,10 +112,8 @@ export class RewardsCore implements ForManageRewards {
 		let transferredToTarget = false;
 
 		// 1. Si la recompensa tiene una sala especial asignada, transferir al jugador
-		this.logger.log(locked);
 		if (locked.roomId) {
 			const targetRoom = await this.roomRepo.findById(locked.roomId);
-			this.logger.log(targetRoom);
 			if (targetRoom?.isActive) {
 				try {
 					const success = await this.panelApi.changePlayerSenior(
@@ -299,10 +297,37 @@ export class RewardsCore implements ForManageRewards {
 		// FORCE_RETRY: Forzar la ejecución hacia LuckyBet con transferencia y retorno
 		if (reward.roomId && this.roomRepo) {
 			const targetRoom = await this.roomRepo.findById(reward.roomId);
-			if (targetRoom?.isActive) {
-				await this.panelApi
-					.changePlayerSenior(playerIdentifier, targetRoom.name)
-					.catch(() => undefined);
+      if (targetRoom?.isActive) {
+        try {
+          const success = await this.panelApi.changePlayerSenior(
+						playerIdentifier,
+						targetRoom.name,
+					);
+
+					if (!success) {
+						this.logger.error(`Fallo al transferir jugador a sala [${targetRoom.name}]`);
+						return await this.rewardRepo.updateStatus(
+							reward.id,
+							RewardStatus.TIMEOUT_UNCERTAIN,
+							{
+								errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar.`,
+							},
+						);
+					}
+        } catch (err) {
+          this.logger.error(
+						`Error al transferir jugador a sala [${targetRoom.name}]:`,
+						err,
+					);
+					return await this.rewardRepo.updateStatus(
+						reward.id,
+						RewardStatus.TIMEOUT_UNCERTAIN,
+						{
+							errorMessage: `Fallo al transferir a la sala promocional [${targetRoom.name}] antes de acreditar. Error: ${err}`,
+						},
+					);
+        }
+
 			}
 		}
 
