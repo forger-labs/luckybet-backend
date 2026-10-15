@@ -33,11 +33,10 @@ import type {
 @Injectable()
 export class AdminPanelService implements ForAdminPanel {
 	/**
-	 * Retrieves the current senior/room login of a player via area=useredit.
+	 * Retrieves the current senior/room login of a player via area=usersettings&module=base.
 	 */
 	async getPlayerSenior(userId: string | number): Promise<string | null> {
-		const url = `${this.panelHost}/index.php?act=admin&area=usersettings&module=base&id=${userId}&response=js
-   `;
+		const url = `${this.panelHost}/index.php?act=admin&area=usersettings&module=base&id=${userId}&response=js`;
 
 		try {
 			const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
@@ -61,7 +60,7 @@ export class AdminPanelService implements ForAdminPanel {
 		}
 	}
 	/**
-	 * Changes the player senior/room in LuckyBet via area=useredit.
+	 * Changes the player senior/room in LuckyBet via area=usersettings&module=base.
 	 */
 	async changePlayerSenior(
 		userId: string | number,
@@ -69,7 +68,7 @@ export class AdminPanelService implements ForAdminPanel {
 	): Promise<boolean> {
 		const url = `${this.panelHost}/index.php?act=admin&area=usersettings&module=base&id=${userId}&response=js`;
 		const params = new URLSearchParams();
-		params.append('create_login', seniorName);
+		params.append('setting[name][0]', 'create_login');
 		params.append('setting[value]', seniorName);
 
 		const data = await this.requestWithSession<Record<string, unknown>>(sessionId => {
